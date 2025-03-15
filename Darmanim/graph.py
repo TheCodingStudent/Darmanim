@@ -132,12 +132,12 @@ class Graph:
     def show(self) -> None:
         self.surface.fill(self.color.rgb())
 
+        self.grid.show()
+        self.axis.show()
+
         for function in self.functions:
             function.update()
             function.show()
-
-        self.grid.show()
-        self.axis.show()
 
         self.draw_border()
         self.screen.blit(self.surface, (self.x, self.y))

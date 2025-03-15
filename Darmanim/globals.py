@@ -73,3 +73,21 @@ class LerpValue(Object, Value):
     
     def __neg__(self) -> LerpValue:
         return LerpValue(-self.start, -self.end, self.transition_time)
+
+
+class ContinuosValue(Object, Value):
+    def __init__(self, start: float, step: float, transition_time: float):
+        Object.__init__(self)
+        Value.__init__(self, start)
+
+        self.step = step
+        self.start = start
+        self.transition_time = transition_time
+    
+    def update(self) -> False:
+        t = self.time / self.transition_time
+        self.value = self.start + self.step * t
+        return False
+
+    def __neg__(self) -> LerpValue:
+        return ContinuosValue(-self.start, -self.step, self.transition_time)
