@@ -1,93 +1,75 @@
 from __future__ import annotations
-import pygame
-
-from Darmanim.types import *
-
-pygame.init()
-iterable = (tuple, list)
-
-
-def parse_base(value: float, base: tuple[str, int], decimals: int=3) -> str:
-    value /= base[1]
-    if value == 0: return '0'
-    if value % 1: return f'{round(value, decimals)}{base[0]}'
-    if value == 1: return base[0]
-    if value == -1: return f'-{base[0]}'
-    return f'{int(value)}{base[0]}'
-
-
-def parse_time_to_sec(time: str|int|float) -> float:
-    if isinstance(time, (int|float)): return time
-    minutes, seconds = time.split(':')
-    return 60*int(minutes) + float(seconds)
-
-
-def parse_size(size: str|int|float, factor: float=1, cast=float) -> float:
-    if isinstance(size, (int|float)): return size
-    if size.endswith('%'): return cast(factor * float(size[:-1])/100)
-
-
-class Clock:
-    fps: int=0
-    def __init__(self):
-        self.dt: sec = 0
-        self.time: sec = 0
-        self.clock = pygame.time.Clock()
-    
-    def get_fps(self) -> float:
-        return self.clock.get_fps()
-
-    def tick(self) -> ms:
-        self.dt = self.clock.tick(self.fps) / 1000
-        self.time += self.dt
-
-        return self.dt
+from Darmanim.time import Clock
 
 
 class Object:
-    elements: list[Object] = []
-    clock: Clock = Clock()
-    def __init__(self, transition_time: float|str=0, start_time: float|str=0):
-        self.t = 0
-        self.time = 0
-        self.start_time = parse_time_to_sec(start_time)
-        self.transition_time = parse_time_to_sec(transition_time)
+    elements: list = []
+
+    def __init__(self):
+        self.start_time = max(0, Clock.time)
+        self.keep_updating = True
+        Object.add(self)
+
+    def update_time(self) -> None:
+        self.time = max(Clock.time - self.start_time, 0) + Clock.dt
+
+    def add(element: any) -> None:
+        Object.elements.append(element)
+    
+    def update_all() -> None:
+        for element in Object.elements:
+            element.update_time()
+            if not element.keep_updating: continue
+            if element.update(): Object.elements.remove(element)
+
+
+def get_value(value: any) -> Value:
+    if isinstance(value, (Value, LerpValue)): return value
+    return Value(value)
+
+
+class Value:
+    def __init__(self, value: any):
+        self.value = value
+    
+    def get(self, cast: type|None=None) -> any:
+        if cast is None: return self.value
+        return cast(self.value)
+
+    def __mul__(self, other: any) -> any:
+        return self.value * other
+    
+    def __rmul__(self, other: any) -> any:
+        return self.value * other
+    
+    def __add__(self, other: any) -> any:
+        return self.value + other
+
+    def __radd__(self, other: any) -> any:
+        return self.value + other
+
+    def __truediv__(self, other: any) -> any:
+        return self.value / other
+    
+    def __rtruediv__(self, other: any) -> any:
+        return other / self.value
+    
+    def __index__(self) -> int:
+        return int(self.value)
+
+
+class LerpValue(Object, Value):
+    def __init__(self, start: float, end: float, transition_time: float):
+        Object.__init__(self)
+        Value.__init__(self, start)
+        self.end = end
+        self.value = self.start = start
+        self.transition_time = transition_time
     
     def update(self) -> bool:
-        if self.time > self.transition_time + Object.clock.dt: Object.elements.remove(self)
-        if Object.clock.time < self.start_time: return False
-        self.time += Object.clock.dt
-        self.t = min(self.time / self.transition_time, 1)
-        return True
-
-    def _update_all() -> None:
-        Object.clock.tick()
-        for element in Object.elements:
-            element.update()
-
-
-class Event:
-    def __init__(self, function: callable, args: list[any]=[], kwargs: dict[str, any]={}, event_time: str|int=0):
-        Object.elements.append(self)
-
-        self.event_time = parse_time_to_sec(event_time)
-        self.args = args
-        self.kwargs = kwargs
-        self.function = function
-
-    def update(self) -> None:
-        if Object.clock.time >= self.event_time:
-            self.function(*self.args, **self.kwargs)
-            Object.elements.remove(self)
-
-
-class TransitionValue(Object):
-    def __init__(self, start: any, end: any, transition_time: str|int, start_time: str|int=0):
-        super().__init__()
-        Object.elements.append(self)
-
-        self.value = self.start = start
-        self.end = end
+        t = min(self.time/self.transition_time, 1)
+        self.value = self.start + (self.end - self.start) * t
+        return t == 1
     
-    def update(self) -> None:
-        super().update()
+    def __neg__(self) -> LerpValue:
+        return LerpValue(-self.start, -self.end, self.transition_time)

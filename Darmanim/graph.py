@@ -1,385 +1,230 @@
 from __future__ import annotations
+import math
 import pygame
 import numpy as np
-
-from Darmanim.globals import Object, parse_size, iterable, parse_base, parse_time_to_sec, Event
-from Darmanim.color import Color, TransitionColor, get_color
-
-class AxisLabels:
-    letters: str='abcdefghijklmnopqrstuvwxyz'
-    def __init__(
-        self, axis: str,
-        font: str='Cambria Math', font_size: int=18,
-        values: list[str]|None=None,
-        color: Color=Color.LIGHTGRAY,
-        bold: bool=True, 
-        decimals: int=3
-    ):
-        self.axis = axis
-        self.bold = bold
-        self.color = get_color(color)
-        self.values = values
-        self.font_type = font
-        self.decimals = decimals
-        self.font_size = font_size
-        self.labels = []
-
-    def attach(self, graph: Graph) -> AxisLabels:
-        self.graph = graph
-
-        self.base = getattr(graph.grid, f'{self.axis}_base')
-        axis_values = getattr(graph.grid, f'{self.axis}_axis')
-        if self.base != ('', 1):
-            axis_values = [parse_base(value, self.base, self.decimals) for value in axis_values]
-        else: axis_values = np.round(axis_values, self.decimals)
-
-        axis_length = len(axis_values)
-
-        self.font_size = parse_size(self.font_size, self.graph.margin/2, cast=int)
-        self.font = pygame.font.SysFont(self.font_type, self.font_size, bold=self.bold)
-        self.values = self.values if self.values is not None and any(self.values) else axis_values
-        self.values = self.values[:axis_length]
-        self.labels = self.update_labels()
-        self.label_rects = self.draw_x_axis() if self.axis=='x' else self.draw_y_axis()
-
-        return self
-
-    def update_labels(self) -> list[pygame.Surface]:
-        return [self.font.render(str(value), True, self.color.rgb()) for value in self.values]
-
-    def draw_x_axis(self) -> list[pygame.Rect]:
-        result = []
-        for i, label in enumerate(self.labels):
-            rect = label.get_rect(center=(self.graph.grid.x[i] + self.graph.margin, self.graph.height - self.graph.margin/2))
-            result.append(rect)
-        
-        return result
-
-    def draw_y_axis(self) -> list[pygame.Rect]:
-        result = []
-        for i, label in enumerate(self.labels):
-            rect = label.get_rect(center=(self.graph.margin/2, self.graph.grid.y[i] + self.graph.margin))
-            result.append(rect)
-        
-        return result
-    
-    def update(self) -> None:
-        if not isinstance(self.color, TransitionColor): return
-        self.labels = self.update_labels()
-
-    def draw(self) -> None:
-        if self.graph is None: return
-        self.update()
-        
-        for label, rect in zip(self.labels, self.label_rects):
-            self.graph.blit(label, rect)
+import pygame.gfxdraw
+from Darmanim.window import Window
+from Darmanim.color import get_color
+from Darmanim.globals import get_value, LerpValue
 
 
-class Space(pygame.Surface):
+class Grid:
     def __init__(
         self,
         minx: float=-5, maxx: float=5,
         miny: float=-5, maxy: float=5,
-        padding: float=0.5,
-        x_base: tuple[str, int]=('', 1),
-        y_base: tuple[str, int]=('', 1),
+        x_padding: float=1, y_padding: float=1,
+        x_interval: float=1, y_interval: float=1,
+        x_color: any='darkred', y_color: any='darkblue'
     ):
-        self.padding = padding
-        self.x_base = x_base
-        self.y_base = y_base
-        self.miny, self.maxy = miny * y_base[1], maxy * y_base[1]
-        self.minx, self.maxx = minx * x_base[1], maxx * x_base[1]
-        self.x_width = self.maxx - self.minx
-        self.y_height = self.maxy - self.miny
+        self.graph = None
+        self.minx, self.maxx = minx, maxx
+        self.miny, self.maxy = miny, maxy
 
+        self.x_len = (maxx - minx + 2*x_padding)
+        self.y_len = (maxy - miny + 2*y_padding)
+        self.x_padding = x_padding
+        self.y_padding = y_padding
+        self.x_range = np.arange(minx/x_interval, maxx/x_interval + 1) * x_interval
+        self.y_range = np.arange(miny/y_interval, maxy/y_interval + 1) * y_interval
 
-class Grid(Space):
-    def __init__(
-        self,
-        padding: float=0.5,
-        minx: float=-5, maxx: float=5,
-        miny: float=-5, maxy: float=5,
-        x_interval: float=1,
-        y_interval: float=1,
-        x_secondary: float=0.5,
-        y_secondary: float=0.5,
-        x_base: tuple[str, int]=('', 1),
-        y_base: tuple[str, int]=('', 1),
-        x_color: tuple[Color, Color]|Color=(Color.PRIMARY_BLUE, Color.SECONDARY_BLUE),
-        y_color: tuple[Color, Color]|Color=(Color.PRIMARY_BLUE, Color.SECONDARY_BLUE)
+        self.has_zero_in_x = (minx <= 0 and maxx >= 0)
+        self.has_zero_in_y = (miny <= 0 and maxy >= 0)
 
-    ):
-        super().__init__(minx, maxx, miny, maxy, padding, x_base, y_base)
-        self.zero_in_x_axis = (minx < 0 and maxx >= 0) or (minx <= 0 and maxx > 0)
-        self.zero_in_y_axis = (miny < 0 and maxy >= 0) or (miny <= 0 and maxy > 0)
-        self.x_axis = self.get_axis('x', x_interval * x_base[1])
-        self.y_axis = self.get_axis('y', y_interval * y_base[1])
-        self.x_secondary = self.get_axis('x', x_secondary * x_base[1])
-        self.y_secondary = self.get_axis('y', y_secondary * y_base[1])
-        self.x_color = x_color if isinstance(x_color, iterable) else (x_color, x_color)
-        self.y_color = y_color if isinstance(y_color, iterable) else (y_color, y_color)
+        self.x_color = get_color(x_color)
+        self.y_color = get_color(y_color)
     
-    def get_axis(self, axis: str, interval: float) -> np.array:
-        min_value = getattr(self, f'min{axis}')
-        max_value = getattr(self, f'max{axis}')
-        has_zero = getattr(self, f'zero_in_{axis}_axis')
-
-        if not has_zero:
-            return np.arange(min_value, max_value + interval, interval)
-
-        if min_value % interval:
-            min_axis = np.arange(interval, -min_value, interval)
-            min_axis = -np.append(min_axis, -min_value)[::-1]
-        else: min_axis = np.arange(min_value, 0, interval)
-
-        max_axis = np.append(np.arange(0, max_value, interval), max_value)
-        return np.concatenate((min_axis, max_axis))
-
-    def get_grid_axis(self, values: np.array, axis: str) -> np.array:
-        min_value = getattr(self, f'min{axis}')
-        margin = self.graph.margin
-        if axis == 'x':
-            return (values - min_value + self.padding) * self.width
-
-        return self.graph.height - 2*margin - (values - min_value + self.padding) * self.height
-
     def attach(self, graph: Graph) -> Grid:
         self.graph = graph
-        margin = self.graph.margin
-        width = self.graph.width
-        height = self.graph.height
-
-        self.width = (width - 2*margin) / (self.maxx - self.minx + 1)
-        self.height = (height - 2*margin) / (self.maxy - self.miny + 1)
-
-        self.x = self.get_grid_axis(self.x_axis, 'x')
-        self.y = self.get_grid_axis(self.y_axis, 'y')
-        self.xs = self.get_grid_axis(self.x_secondary, 'x')
-        self.ys = self.get_grid_axis(self.y_secondary, 'y')
-
-        self.rect = pygame.Rect(0, 0, width-2*margin, height-2*margin)
-
+        self.x_pixels = self.convert_x_to_pixel(self.x_range)
+        self.y_pixels = self.convert_y_to_pixel(self.y_range)
+        self.rect = pygame.Rect(0, 0, self.graph.width, self.graph.height).inflate(-self.x_pixels[0], -self.y_pixels[-1])
         return self
     
-    def draw_vertical(self, x: float, index: int=0) -> None:
-        color = self.x_color[index].rgb()
-        pygame.draw.line(self.graph.inner, color, (x, self.rect.top), (x, self.rect.bottom))
-    
-    def draw_horizontal(self, y: float, index: int=0) -> None:
-        color = self.y_color[index].rgb()
-        pygame.draw.line(self.graph.inner, color, (self.rect.left, y), (self.rect.right, y))
+    def convert_x_to_pixel(self, x: float|np.array) -> float|np.array:
+        return (x - self.x_range[0] + self.x_padding) * self.graph.width / self.x_len
 
-    def draw(self) -> None:
-        for xs in self.xs: self.draw_vertical(xs, index=1)
-        for ys in self.ys: self.draw_horizontal(ys, index=1)
-        for x in self.x: self.draw_vertical(x)
-        for y in self.y: self.draw_horizontal(y)
+    def convert_y_to_pixel(self, y: float|np.array) -> float|np.array:
+        return (-y + self.y_range[-1] + self.y_padding) * self.graph.height / self.y_len
+
+    def draw_x_lines(self) -> None:
+        for x in self.x_pixels:
+            pygame.draw.line(self.graph.surface, self.x_color.rgb(), (x, self.rect.top), (x, self.rect.bottom))
+    
+    def draw_y_lines(self) -> None:
+        for y in self.y_pixels:
+            pygame.draw.line(self.graph.surface, self.y_color.rgb(), (self.rect.left, y), (self.rect.right, y))
+
+    def show(self) -> None:
+        if self.x_color is not None: self.draw_x_lines()
+        if self.y_color is not None: self.draw_y_lines()
+        
 
 
 class Axis:
     def __init__(
         self,
-        mark_at_zero: bool=True,
-        width: int=3,
-        x_color: Color=Color.AZURE,
-        y_color: Color=Color.RED
+        mark_x_at_zero: bool=True,
+        mark_y_at_zero: bool=True,
+        x_axis_color: any='red',
+        y_axis_color: any='blue'
     ):
-        self.width = width
-        self.x_color = x_color
-        self.y_color = y_color
-        self.mark_at_zero = mark_at_zero
+        self.mark_x_at_zero = mark_x_at_zero
+        self.mark_y_at_zero = mark_y_at_zero
+        self.x_axis_color = get_color(x_axis_color)
+        self.y_axis_color = get_color(y_axis_color)
     
     def attach(self, graph: Graph) -> Axis:
         self.graph = graph
-
-        if self.graph.grid.zero_in_x_axis:
-            self.x_zero = self.graph.grid.x[self.graph.grid.x_axis == 0][0]
-
-        if self.graph.grid.zero_in_y_axis:
-            self.y_zero = self.graph.grid.y[self.graph.grid.y_axis == 0][0]
-
-        margin = self.graph.margin
-        padding = self.graph.grid.padding
-
-        if self.mark_at_zero:
-            self.x = self.x_zero if self.graph.grid.zero_in_x_axis else -1
-            self.y = self.y_zero if self.graph.grid.zero_in_y_axis else -1
-        else:
-            self.x = margin + padding*self.graph.grid.width
-            self.y = self.graph.height - (margin + padding*self.graph.grid.height)
-
-        self.vertical = ((self.x, 0), (self.x, self.graph.height))
-        self.horizontal = ((0, self.y), (self.graph.width, self.y))
-
         return self
 
-    def draw(self) -> None:
-        pygame.draw.line(self.graph.inner, self.x_color.rgb(), *self.vertical, width=self.width)
-        pygame.draw.line(self.graph.inner, self.y_color.rgb(), *self.horizontal, width=self.width)
+    def draw_x_line(self) -> None:
+        if self.mark_x_at_zero and self.graph.grid.has_zero_in_x: x = self.graph.grid.convert_x_to_pixel(0)
+        else: x = self.graph.grid.convert_x_to_pixel(self.graph.grid.minx)
+        top, bottom = self.graph.grid.rect.top, self.graph.grid.rect.bottom
+        pygame.draw.line(self.graph.surface, self.x_axis_color.rgb(), (x, top), (x, bottom), width=3)
+    
+    def draw_y_line(self) -> None:
+        if self.graph.grid.has_zero_in_y and self.mark_y_at_zero: y = self.graph.grid.convert_y_to_pixel(0)
+        else: y = self.graph.grid.convert_y_to_pixel(self.graph.grid.miny)
+        left, right = self.graph.grid.rect.left, self.graph.grid.rect.right
+        pygame.draw.line(self.graph.surface, self.y_axis_color.rgb(), (left, y), (right, y), width=3)
 
+    def show(self) -> None:
+        if self.x_axis_color: self.draw_x_line()
+        if self.y_axis_color: self.draw_y_line()
+            
 
-class Graph(pygame.Surface):
+class Graph:
     def __init__(
-        self, window: pygame.Surface|None=None,
-        size: tuple[int, int]=(0, 0),
-        x: int|None=None, y: int|None=None,
-        margin: int=50,
-        axis: Axis|None=None,
+        self, size: tuple[int, int],
         grid: Grid|None=None,
-        x_labels: AxisLabels|None=None,
-        y_labels: AxisLabels|None=None,
-        border: int=0,
-        fill: Color|str=''
+        axis: Axis|None=None,
+        color: any=None,
+        border: any='white',
+        border_width: int=1
     ):
-
-        self.attached = False
+        self.screen = None
+        self.surface = pygame.Surface(size)
         self.width, self.height = size
-        self.background = get_color(fill)
+
+        self.grid = grid.attach(self) if grid else Grid().attach(self)
+        self.axis = axis.attach(self) if axis else Axis().attach(self)
+
+        self.color = color
+        self.border = get_color(border)
+        self.border_width = border_width
 
         self.functions = []
-        self.border = border
-        self.margin = margin
-        self.x, self.y = x, y
-
-        self.grid = grid or Grid()
-        self.axis = axis or Axis()
-        self.x_labels = x_labels or AxisLabels(axis='x')
-        self.y_labels = y_labels or AxisLabels(axis='y')
-
-        if window is not None: self.attach(window)
-
-    def attach(self, window: pygame.Surface) -> None:
-        self.attached = True
-
-        Object.elements.append(self)
-        self.surface = window.surface
-        if self.width==0: self.width = window.width
-        if self.height==0: self.height = window.height
-        pygame.Surface.__init__(self, (self.width, self.height))
-
-        self.inner = pygame.Surface((self.width-2*self.margin, self.height-2*self.margin), pygame.SRCALPHA)
-        self.inner.convert_alpha()
-
-        if not self.background: self.background = window.fill
-
-        if self.x is None: self.x = (window.width-self.width) / 2
-        if self.y is None: self.y = (window.height-self.height) / 2
-        self.rect = self.get_rect(topleft=(self.x, self.y))
-
-        self.grid = self.grid.attach(self)
-        self.axis = self.axis.attach(self)
-        self.x_labels = self.x_labels.attach(self)
-        self.y_labels = self.y_labels.attach(self)
-
-        for function in self.functions: function.attach(self)
-
-    def draw(self) -> None:
-        self.fill(self.background.rgba())
-        self.inner.fill(self.background.rgba())
-
-        self.grid.draw()
-        self.axis.draw()
-        self.x_labels.draw()
-        self.y_labels.draw()
-
-        for function in self.functions: function.draw()
-
-        if self.border == 0: return
-        pygame.draw.rect(self, 'white', (0, 0, *self.get_size()), width=self.border)
-
-    def update(self) -> None:
-        self.draw()
-        self.blit(self.inner, (self.margin, self.margin))
-        self.surface.blit(self, self.rect.topleft)
-
-    def attach_function(self, function: Function) -> None:
-        self.functions.append(function.attach(self))
-
-    def add(self, function: Function|callable[(float, ), float], time: str|float=0) -> None:
-        if callable(function): function = Function(function)
-
-        time = parse_time_to_sec(time)
-        if self.attached: function = function.attach(self)
-
-        if not time: return self.functions.append(function)
-
-        if isinstance(function.color, TransitionColor) and function.color.start_time == 0:
-            function.color.start_time = time
-        return Event(function=self.attach_function, args=(function, ), event_time=time)
     
-    def remove(self, function: Function, time: str|int=0, **kwargs) -> None:
-        if time: return Event(function=self.functions.remove, args=(function, ), event_time=time)
-        return self.functions.remove(function)
+    def attach(self, window: Window, x: int|None=None, y: int|None=None) -> None:
+        self.screen = window.screen
+        if self.color is None: self.color = window.color
+        if x is None: self.x = (self.screen.get_width() - self.width) / 2
+        else: self.x = x
+        if y is None: self.y = (self.screen.get_height() - self.height) / 2
+        else: self.y = y
+
+    def draw_border(self) -> None:
+        if (self.border is None) or (self.border_width == 0): return
+        pygame.draw.rect(self.surface, self.border.rgb(), (0, 0, self.width, self.height), width=self.border_width)
+
+    def show(self) -> None:
+        self.surface.fill(self.color.rgb())
+
+        for function in self.functions:
+            function.update()
+            function.show()
+
+        self.grid.show()
+        self.axis.show()
+
+        self.draw_border()
+        self.screen.blit(self.surface, (self.x, self.y))
+    
+    def add(self, function: Function) -> None:
+        self.functions.append(function)
+        function.attach(self)
+    
+    def add_function(self, function: callable, call_update: bool=False) -> None:
+        return self.add(Function(function, call_update))
 
 
-class Function(Object):
+class Function:
     def __init__(
-        self,
-        function: callable[(float, ), float],
-        color: Color|str='yellow', resolution: float=0.01,
-        width: int=3, call_update: bool=False,
-        fill: Color|str|None=None
+        self, function: callable,
+        call_update: bool=False,
+        resolution: float=0.01,
+        color: any='yellow',
+        width: int=1,
+        animation_time: any=None,
+        antialiasing: bool=False,
+        **kwargs
     ):
-        super().__init__()
-
-        self.color = get_color(color)
-        self.fill = get_color(fill)
-        self.closed = self.fill is not None
-
-        self.width = width
         self.function = function
-        self.resolution = resolution
-
         self.call_update = call_update
+        self.resolution = get_value(resolution)
+        self.color = get_color(color)
+        self.width = get_value(width)
 
-    def get_y_values(self) -> np.array:
-        try:
-            return self.function(self.x_axis.copy())
-        except TypeError:
-            return np.array([self.function(x) for x in self.x_axis])
+        if animation_time is None: self.animation_time = animation_time
+        else: self.animation_time = LerpValue(0, 1, animation_time)
+        self.antialiasing = antialiasing
 
-    def update(self) -> None:
-        y_axis = self.get_y_values()
-        self.segments = self.find_segments(y_axis)
-        self.y = self.graph.grid.get_grid_axis(y_axis, 'y')
-        self.coordinates = np.stack((self.x, self.y), axis=1)
-
-    def find_segments(self, values: np.array) -> list[list[tuple, tuple]]:
-        segments = []
-
-        current_segment = []
-        bool_values = (values < -self.infinity) + (values > self.infinity) + np.isnan(values)
-
-        for i, value in enumerate(1 - bool_values):
-            if (value == True) and not current_segment and i > 0:
-                current_segment.append(i - 1)
-            elif (value == False) and current_segment:
-
-                if abs(current_segment[0] - i + 1) > 1:
-                    current_segment.append(i)
-                    segments.append(current_segment)
-                current_segment = []
-
-        if current_segment:
-            current_segment.append(len(values))
-            segments.append(current_segment)
-
-        if not segments: segments.append((0, len(values)))
-
-        return segments
-
-
-    def attach(self, graph: Graph) -> Function:
-        self.graph = graph
-        self.infinity = 2 * max(abs(self.graph.grid.miny), abs(self.graph.grid.maxy))
-        self.x_axis = self.graph.grid.get_axis('x', self.resolution)
-        self.x = self.graph.grid.get_grid_axis(self.x_axis, 'x')
-        self.update()
-
-        return self
+        self.kwargs = kwargs
     
-    def draw(self) -> None:
-        if self.call_update: self.update()
-        for start, end in self.segments:
-            if self.closed: pygame.draw.polygon(self.graph.inner, self.fill.rgba(), self.coordinates[start:end])
-            pygame.draw.lines(self.graph.inner, self.color.rgba(), False, self.coordinates[start:end], width=self.width)
+    def set_kwargs(self, **kwargs) -> None:
+        self.kwargs |= kwargs
+
+    def update(self, update_values: bool=False) -> None:
+        if not (self.call_update or update_values): return
+        resolution = self.resolution.get()
+        self.x = np.arange(self.graph.grid.minx, self.graph.grid.maxx + resolution, resolution)
+        self.y = self.function(self.x, **self.kwargs)
+
+        if self.animation_time:
+            i = int(self.animation_time.get() * len(self.x))
+            self.y[i:] = 0
+
+        self.x_pixels = self.graph.grid.convert_x_to_pixel(self.x)
+        self.y_pixels = self.graph.grid.convert_y_to_pixel(self.y)
+        self.coordinates = np.column_stack((self.x_pixels, self.y_pixels))
+
+    def attach(self, graph: Graph) -> None:
+        self.graph = graph
+        self.update(update_values=True)
+    
+    def draw_antialiasing(self) -> None:
+        width = self.width.get()
+        for p0, p1 in zip(self.coordinates[:-1], self.coordinates[1:]):
+            normal = p1 - p0
+            magnitude = math.hypot(normal[0], normal[1])
+            normal[0], normal[1] = normal[1], -normal[0]
+            
+            try: normal = width * normal / (2 * magnitude)
+            except ZeroDivisionError: continue
+
+            a = p0 + normal
+            b = p0 - normal
+            c = p1 - normal
+            d = p1 + normal
+
+            try: 
+                pygame.gfxdraw.filled_polygon(self.graph.surface, (a, b, c, d), self.color.rgb())
+                pygame.gfxdraw.aapolygon(self.graph.surface, (a, b, c, d), self.color.rgb())
+            except ValueError: pass
+
+    def show(self) -> None:
+        if self.width.get() == 1:
+            return pygame.draw.aalines(self.graph.surface, self.color.rgb(), False, self.coordinates)
+        
+        if self.antialiasing: return self.draw_antialiasing()
+        pygame.draw.lines(self.graph.surface, self.color.rgb(), False, self.coordinates, width=self.width.get(int))
+
+
+class AxisLabels:
+    def __init__(self, graph: Graph):
+        ...
+    
+    def show(self) -> None:
+        ...

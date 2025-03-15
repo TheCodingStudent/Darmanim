@@ -1,128 +1,122 @@
 from __future__ import annotations
-import numpy as np
-from typing import Any
-
-from Darmanim.globals import Object, color
+from Darmanim.time import time
+from Darmanim.globals import Object
 
 
-def get_color(color: Color|str) -> Color|None:
-    if color is None: return None
-    if color == '': return Color()
-    if isinstance(color, str): return getattr(Color, color.upper())
-    return color.copy()
-
-
-def color_lerp(start: color, end: color, t: float) -> color:
-    start = np.array(start)
-    end = np.array(end)
-
-    (r, g, b, a) = start + (end - start) * t
-    return int(r), int(g), int(b), int(a)
+def get_color(value: any) -> Color:
+    if value is None: return None
+    if isinstance(value, (Color, LerpColor)): return value
+    return Color(value)
 
 
 class Color:
-    def __init__(self, *value: Any):
-        if not value: value = (0, 0, 0)
-        elif len(value) == 1: value = value[0]
-
+    def __init__(self, value: any):
         self.a = 255
-        if isinstance(value, (tuple, list)) and len(value) >= 3:
-            self.r = value[0]
-            self.g = value[1]
-            self.b = value[2]
-            if len(value) == 4: self.a = value[3]
-        elif isinstance(value, str) and value.startswith('#'):
-            self.r = int(value[1:3], base=16)
-            self.g = int(value[3:5], base=16)
-            self.b = int(value[5:7], base=16)
-            if len(value) == 9: self.a = int(value[7:9], base=16)
-        elif value is None:
-            self.r = 0
-            self.g = 0
-            self.b = 0
+
+        if isinstance(value, (list, tuple)):
+            if len(value) == 3: self.r, self.g, self.b = value
+            if len(value) == 4: self.r, self.g, self.b, self.a = value
+        elif isinstance(value, str):
+            if value.startswith('#'):
+                self.r = int(value[1:3], base=16)
+                self.g = int(value[3:5], base=16)
+                self.b = int(value[5:7], base=16)
+                if len(value) == 9: self.a = int(value[7:9], base=16)
+            else:
+                color = getattr(Color, value.lower())
+                self.r, self.g, self.b = color.rgb()
     
-    def update_alpha(self, alpha: int|float) -> None:
-        self.a = alpha
-
-    def copy(self) -> Color:
-        return Color(*self.rgba())
-
-    def rgb(self) -> color:
+    def rgb(self) -> tuple[int, int, int]:
         return (self.r, self.g, self.b)
 
-    def rgba(self) -> color:
-        return (self.r, self.g, self.b, self.a)
-
     def lerp(self, other: Color, t: float) -> Color:
-        lerp = color_lerp(self.rgba(), other.rgba(), t)
-        return Color(lerp)
-
-    def __setattr__(self, name, value):
-        super().__setattr__(name, int(value))
+        r = self.r + (other.r - self.r) * t
+        g = self.g + (other.g - self.g) * t
+        b = self.b + (other.b - self.b) * t
+        return Color((r, g, b))
     
+    def __add__(self, other: Color) -> Color:
+        r = self.r + other.r
+        g = self.g + other.g
+        b = self.b + other.b
+        return Color((r, g, b))
+    
+    def __sub__(self, other: Color) -> Color:
+        r = self.r - other.r
+        g = self.g - other.g
+        b = self.b - other.b
+        return Color((r, g, b))
+
+    def __mul__(self, other: float) -> Color:
+        r = self.r * other
+        g = self.g * other
+        b = self.b * other
+        return Color((r, g, b))
+
     def __repr__(self) -> str:
-        return f'{self.rgba()}'
+        return f'{self.rgb()=}'
 
 
-class TransitionColor(Object):
-    def __init__(self, start: Color|str, end: Color|str, transition_time: str|float, start_time: str|float=0):
-        super().__init__(transition_time, start_time)
-        Object.elements.append(self)
-        self.end = get_color(end)
+class LerpColor(Object):
+    def __init__(self, start: any, end: any, transition_time: time):
+        super().__init__()
         self.color = self.start = get_color(start)
-        self.a = self.color.a
-
-    def copy(self) -> TransitionColor:
-        copy = TransitionColor(self.start, self.end, self.transition_time, self.start_time)
-        copy.a = self.a
-        return copy
-
-    def update_alpha(self, alpha: int|float) -> None:
-        self.a = alpha
-
-    def update(self) -> None:
-        if not super().update(): return
-        self.color = self.start.lerp(self.end, self.t)
-        self.color.a = int(self.color.a * self.a / 255)
-
-    def rgb(self) -> None:
-        return self.color.rgb()
+        self.end = get_color(end)
+        self.transition_time = transition_time
     
-    def rgba(self) -> None:
-        return self.color.rgba()
+    def update(self) -> bool:
+        t = min(self.time/self.transition_time, 1)
+        self.color = self.start + (self.end - self.start) * t
+
+        return t == 1
+    
+    def rgb(self) -> tuple[int, int, int]:
+        return self.color.rgb()
 
 
-Color.PRIMARY_BLUE = Color('#597988')
-Color.SECONDARY_BLUE = Color('#172724')
+Color.white     = Color('#ffffff')
+Color.lightgray = Color('#bfbfbf')
+Color.gray      = Color('#7f7f7f')
+Color.darkgray  = Color('#3f3f3f')
+Color.black     = Color('#000000')
 
-Color.BLACK = Color('#000000')
-Color.GRAY = Color('#7f7f7f')
-Color.WHITE = Color('#ffffff')
-Color.RED = Color('#ff0000')
-Color.ORANGE = Color('#ff7f00')
-Color.YELLOW = Color('#ffff00')
-Color.LIMA = Color('#7fff00')
-Color.GREEN = Color('#00ff00')
-Color.TEAL = Color('#00ff7f')
-Color.CYAN = Color('#00ffff')
-Color.AZURE = Color('#007fff')
-Color.BLUE = Color('#0000ff')
-Color.PURPLE = Color('#7f00ff')
-Color.MAGENTA = Color('#ff00ff')
-Color.PINK = Color('#ff007f')
+Color.greensage   = Color('#92946f')
+Color.greenforest = Color('#6b8c53')
+Color.babypink    = Color('#e3b0b0')
 
-Color.LIGHTGRAY = Color('#bfbfbf')
+Color.pastelyellow = Color('#fbf8cc')
+Color.pastelorange = Color('#fde4cf')
+Color.pastelpink   = Color('#ffcfd2')
+Color.pastelviolet = Color('#f1c0e8')
+Color.pastelpurple = Color('#cfbaf0')
+Color.pastelazure  = Color('#a3c4f3')
+Color.pastelcyan   = Color('#90dbf4')
+Color.pastelblue   = Color('#8eecf5')
+Color.pastelaqua   = Color('#98f5e1')
+Color.pastelgreen  = Color('#b9fbc0')
 
-Color.DARKGRAY = Color('#3f3f3f')
-Color.DARKRED = Color('#3f0000')
-Color.DARKORANGE = Color('#7f3f00')
-Color.DARKYELLOW = Color('#7f7f00')
-Color.DARKLIMA = Color('#3f7f00')
-Color.DARKGREEN = Color('#007f00')
-Color.DARKTEAL = Color('#007f3f')
-Color.DARKCYAN = Color('#007f7f')
-Color.DARKAZURE = Color('#003f7f')
-Color.DARKBLUE = Color('#00007f')
-Color.DARKPURPLE = Color('#3f007f')
-Color.DARKMAGENTA = Color('#7f007f')
-Color.DARKPINK = Color('#7f003f')
+Color.red       = Color('#ff0000')
+Color.orange    = Color('#ff7f00')
+Color.yellow    = Color('#ffff00')
+Color.lime      = Color('#7fff00')
+Color.green     = Color('#00ff00')
+Color.teal      = Color('#00ff7f')
+Color.cyan      = Color('#00ffff')
+Color.azure     = Color('#007fff')
+Color.blue      = Color('#0000ff')
+Color.purple    = Color('#7f00ff')
+Color.magenta   = Color('#ff00ff')
+Color.pink      = Color('#ff007f')
+
+Color.darkred       = Color('#7f0000')
+Color.darkorange    = Color('#7f3f00')
+Color.darkyellow    = Color('#7f7f00')
+Color.darklime      = Color('#3f7f00')
+Color.darkgreen     = Color('#007f00')
+Color.darkteal      = Color('#007f3f')
+Color.darkcyan      = Color('#007f7f')
+Color.darkazure     = Color('#003f7f')
+Color.darkblue      = Color('#00007f')
+Color.darkpurple    = Color('#3f007f')
+Color.darkmagenta   = Color('#7f007f')
+Color.darkpink      = Color('#7f003f')
