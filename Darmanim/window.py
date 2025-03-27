@@ -1,35 +1,54 @@
-import cv2
+import os
 import pygame
-import numpy as np
-from typing import Generator
+import subprocess
 from Darmanim.time import Clock
 from Darmanim.globals import Object
 from Darmanim.color import Color, get_color
 
 
-class Video:
-    def __init__(self, output: str, width: int, height: int):
-        fourcc = cv2.VideoWriter_fourcc(*'XVID')
-        self.video = cv2.VideoWriter(output, fourcc, Clock.fps, (width, height), True)
-    
-    def write(self, screen: pygame.Surface) -> Generator:
-        frame = self.pg_to_cv2(screen)
-        self.video.write(frame)
+class VideoMP4:
+    def __init__(self, output: str, surface: pygame.Surface):
+        self.output = output
+        self.surface = surface
+        self.width, self.height = self.surface.get_size()
+        self.frame_count = 0
 
-    def pg_to_cv2(self, screen: pygame.Surface) -> np.ndarray:
-        cvarray = pygame.surfarray.array3d(screen)
-        cvarray = cvarray.swapaxes(0, 1)
-        cvarray = cv2.cvtColor(cvarray, cv2.COLOR_RGB2BGR)
-        return cvarray
+        self.folder = os.path.join(os.path.dirname(__file__), 'frames')
+
+    def write(self) -> None:
+        pygame.image.save(self.surface, f'{self.folder}/screen_{self.frame_count:05d}.png')
+        self.frame_count += 1
     
+    def clean_folder(self) -> None:
+        for file in os.listdir(self.folder):
+            os.remove(f'{self.folder}/{file}')
+
     def release(self) -> None:
-        self.video.release()
+        command = [
+            'ffmpeg',
+            '-r', str(Clock.fps),
+            '-f', 'image2',
+            '-s', f'{self.width}x{self.height}',
+            '-i', f'{self.folder}/screen_%05d.png',
+            '-pix_fmt', 'yuv420p',
+            '-vcodec', 'libx264',
+            '-crf', '25',
+            self.output
+        ]
+        
+        subprocess.run(command, check=True)
+        self.clean_folder()
 
 
 class Window:
-    def __init__(self, size: tuple[int, int]=(0, 0), flags: int=0, title: str='Darmanim', icon: str='ratoncita.png', color: Color=Color.black, output: str=''):
+    def __init__(
+        self, size: tuple[int, int]=(0, 0), flags: int=0,
+        title: str='Darmanim', icon: str='ratoncita.png',
+        color: any='background',
+        output: str='', record_time: float=0, fps: int=60
+    ):
         pygame.init()
-
+        Clock.fps = fps
 
         # PROPERTIES
         if size == (0, 0) and flags == 0: flags = pygame.FULLSCREEN
@@ -41,18 +60,24 @@ class Window:
 
         # VIDEO WRITER
         self.output = output
-        if output != '': self.video = Video(output, self.width, self.height)
+        self.record_time = record_time
+        if output != '': self.video = VideoMP4(output, self.screen)
         else: self.video = None
 
         # SETUP
         pygame.display.set_caption(title)
         pygame.display.set_icon(pygame.image.load(icon).convert_alpha())
 
-        Clock.tick()
+    def not_record(self) -> None:
+        self.output = ''
+        self.video = None
 
     def add(self, element: any, x: int|None=None, y: int|None=None) -> None:
         self.elements.append(element)
-        if hasattr(element, 'attach'): element.attach(self, x, y)
+        if hasattr(element, 'attach'):
+            try: element.attach(self, x, y)
+            except TypeError: element.attach(self)
+        return element
 
     def show(self) -> None:
         for element in self.elements:
@@ -61,10 +86,14 @@ class Window:
     def update(self) -> None:
         Clock.tick()
         Object.update_all()
+        for element in self.elements:
+            if hasattr(element, 'update'):
+                element.update()
 
     def run(self) -> None:
         self.running = True
-        Clock.time = 0
+        
+        Clock.time = -1
         while self.running:
             self.screen.fill(self.color.rgb())
             for event in pygame.event.get():
@@ -74,6 +103,8 @@ class Window:
             self.show()
             pygame.display.update()
 
-            if self.output: self.video.write(self.screen)
+            if self.output and Clock.time >= 0:
+                self.video.write()
+                self.running = not (self.record_time != 0 and Clock.time >= self.record_time + Clock.dt)
         
         if self.video: self.video.release()

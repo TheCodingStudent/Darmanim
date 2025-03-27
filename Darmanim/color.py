@@ -5,6 +5,7 @@ from Darmanim.globals import Object
 
 def get_color(value: any) -> Color:
     if value is None: return None
+    if isinstance(value, str) and hasattr(Style, value): return getattr(Style, value)
     if isinstance(value, (Color, LerpColor)): return value
     return Color(value)
 
@@ -84,16 +85,17 @@ Color.greensage   = Color('#92946f')
 Color.greenforest = Color('#6b8c53')
 Color.babypink    = Color('#e3b0b0')
 
+Color.pastelred    = Color('#ff779c')
+Color.pastelorange = Color('#faa39d')
 Color.pastelyellow = Color('#fbf8cc')
-Color.pastelorange = Color('#fde4cf')
-Color.pastelpink   = Color('#ffcfd2')
-Color.pastelviolet = Color('#f1c0e8')
-Color.pastelpurple = Color('#cfbaf0')
-Color.pastelazure  = Color('#a3c4f3')
-Color.pastelcyan   = Color('#90dbf4')
-Color.pastelblue   = Color('#8eecf5')
-Color.pastelaqua   = Color('#98f5e1')
 Color.pastelgreen  = Color('#b9fbc0')
+Color.pastelaqua   = Color('#98f5e1')
+Color.pastelcyan   = Color('#8eecf5')
+Color.pastelazure  = Color('#90dbf4')
+Color.pastelblue   = Color('#a3c4f3')
+Color.pastelpurple = Color('#cfbaf0')
+Color.pastelviolet = Color('#f1c0e8')
+Color.pastelpink   = Color('#ffcfd2')
 
 Color.red       = Color('#ff0000')
 Color.orange    = Color('#ff7f00')
@@ -120,3 +122,20 @@ Color.darkblue      = Color('#00007f')
 Color.darkpurple    = Color('#3f007f')
 Color.darkmagenta   = Color('#7f007f')
 Color.darkpink      = Color('#7f003f')
+
+
+class Style:
+    background = Color('#232136')
+    x_grid_line = Color('#3f3b5a')
+    y_grid_line = Color('#3f3b5a')
+    x_axis_line = Color('#9f98bd')
+    y_axis_line = Color('#9f98bd')
+    red     = Color.pastelred
+    orange  = Color.pastelorange
+    yellow  = Color.pastelyellow
+    green   = Color.pastelgreen
+    cyan    = Color.pastelcyan
+    blue    = Color.pastelblue
+    purple  = Color.pastelpurple
+    violet  = Color.pastelviolet
+    pink    = Color.pastelpink

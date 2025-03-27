@@ -8,8 +8,11 @@ def draw(animation_time: int=1, default: any=0):
         i = LerpValue(0, 1, animation_time)
         def wrapper(x: np.array, *args, **kwargs):
             y = func(x, *args, **kwargs)
-            y[int(i * len(x)):] = default
-            return y
+            try:
+                y[int(i * len(x)):] = default
+                return y
+            except TypeError:
+                return y
         return wrapper
     return inner_draw
 

@@ -1,0 +1,8 @@
+Descargar:
+	https://www.gyan.dev/ffmpeg/builds/ffmpeg-git-full.7z
+
+Renombrar carpeta a FFMPEG
+Abrir CMD y aplicar:
+	setx /m PATH "C:\ffmpeg\bin;%PATH%"
+
+Reiniciar
