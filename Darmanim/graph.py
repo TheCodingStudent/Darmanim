@@ -3,6 +3,7 @@ import math
 import pygame
 import numpy as np
 import pygame.gfxdraw
+from Darmanim.draw import lines
 from Darmanim.time import Clock
 from Darmanim.window import Window
 from Darmanim.color import get_color
@@ -239,7 +240,7 @@ class Graph:
         grid: Grid|None=None,
         axis: Axis|None=None,
         color: any=None,
-        border: any='white',
+        border: any='border',
         border_width: pixel=1
     ):
         self.screen = None
@@ -259,6 +260,7 @@ class Graph:
         self.elements = []
     
     def attach(self, window: Window, x: pixel|None=None, y: pixel|None=None) -> None:
+        self.window = window
         self.screen = window.screen
         if self.color is None: self.color = window.color
         if x is None: self.x = (self.screen.get_width() - self.width) / 2
@@ -315,7 +317,7 @@ class BlankGraph(Graph):
         self, size: tuple[pixel, pixel],
         grid: Grid|None=None,
         color: any=None,
-        border: any='white',
+        border: any='border',
         border_width: pixel=1
     ):
         grid = BlankGrid() if grid is None else grid
@@ -338,16 +340,13 @@ class Function:
     def __init__(
         self, function: callable,
         resolution: unit=0.01,
-        color: any='yellow',
+        color: any='red',
         stroke: pixel=1,
         minx: unit|None=None, maxx: unit|None=None,
         animation_time: any=None,
-        antialiasing: bool=False,
-        call_update: bool=False,
         **kwargs
     ):
         self.function = function
-        self.call_update = call_update
         self.resolution = get_value(resolution)
         self.color = get_color(color)
         self.stroke = get_value(stroke)
@@ -356,7 +355,6 @@ class Function:
 
         if animation_time is None: self.animation_time = animation_time
         else: self.animation_time = LerpValue(0, 1, animation_time)
-        self.antialiasing = antialiasing
 
         self.kwargs = kwargs
     
@@ -379,7 +377,6 @@ class Function:
         self.kwargs |= kwargs
 
     def update(self, update_values: bool=False) -> None:
-        if not (self.call_update or update_values): return
         resolution = self.resolution.get()
         minx = (self.minx or self.graph.grid.minx) - self.graph.grid.x_padding/2
         maxx = (self.maxx or self.graph.grid.maxx) + self.graph.grid.x_padding/2
@@ -399,32 +396,11 @@ class Function:
         self.graph = graph
         self.update(update_values=True)
     
-    def draw_antialiasing(self) -> None:
-        stroke = self.stroke.get()
-        for p0, p1 in zip(self.coordinates[:-1], self.coordinates[1:]):
-            normal = p1 - p0
-            magnitude = math.hypot(normal[0], normal[1])
-            normal[0], normal[1] = normal[1], -normal[0]
-            
-            try: normal = stroke * normal / (2 * magnitude)
-            except ZeroDivisionError: continue
-
-            a = p0 + normal
-            b = p0 - normal
-            c = p1 - normal
-            d = p1 + normal
-
-            try: 
-                pygame.gfxdraw.filled_polygon(self.graph.surface, (a, b, c, d), self.color.rgb())
-                pygame.gfxdraw.aapolygon(self.graph.surface, (a, b, c, d), self.color.rgb())
-            except ValueError: pass
-
     def show(self) -> None:
-        if self.stroke.get() == 1:
-            return pygame.draw.aalines(self.graph.surface, self.color.rgb(), False, self.coordinates)
-        
-        if self.antialiasing: return self.draw_antialiasing()
-        pygame.draw.lines(self.graph.surface, self.color.rgb(), False, self.coordinates, width=self.stroke.get(int))
+        if self.stroke == 1:
+            pygame.draw.aalines(self.graph.surface, self.color.rgb(), False, self.coordinates)
+        else:
+            pygame.draw.lines(self.graph.surface, self.color.rgb(), False, self.coordinates, self.stroke.get(int))
 
 
 class AxisLabels:
@@ -463,6 +439,13 @@ class Path:
         self.x_points = np.append(self.x_points, self.x.get())
         self.y_points = np.append(self.y_points, self.y.get())
 
+        minx, maxx = self.graph.grid.minx - self.graph.grid.x_padding/2, self.graph.grid.maxx + self.graph.grid.x_padding/2
+        miny, maxy = self.graph.grid.miny - self.graph.grid.y_padding/2, self.graph.grid.maxy + self.graph.grid.y_padding/2
+
+        mask = (self.x_points > minx) & (self.x_points < maxx) & (self.y_points > miny) & (self.y_points < maxy)
+        self.x_points = self.x_points[mask]
+        self.y_points = self.y_points[mask]
+
         x = self.graph.grid.convert_x_to_pixel(self.x_points)
         y = self.graph.grid.convert_y_to_pixel(self.y_points)
         self.path = np.column_stack((x, y))
@@ -484,7 +467,12 @@ class Path:
 
 
 class Point:
-    def __init__(self, x: unit, y: unit, radius: pixel=10, stroke: pixel=3, color: any='white', fill: any=None):
+    def __init__(
+        self,
+        x: unit, y: unit,
+        radius: pixel=10, stroke: pixel=3,
+        color: any='white', fill: any=None
+    ):
         self.x = get_value(x)
         self.y = get_value(y)
         self.stroke = get_value(stroke)

@@ -28,6 +28,10 @@ def get_value(value: any) -> Value:
     return Value(value)
 
 
+def get_values(values: list[any]) -> list[Value]:
+    return [get_value(value) for value in values]
+
+
 class Value:
     def __init__(self, value: any):
         self.value = value

@@ -55,6 +55,7 @@ class Window:
         self.screen = pygame.display.set_mode(size, flags)
         self.color = get_color(color)
         self.elements = []
+        self.functions = []
 
         self.width, self.height = self.screen.get_size()
 
@@ -86,9 +87,27 @@ class Window:
     def update(self) -> None:
         Clock.tick()
         Object.update_all()
+
         for element in self.elements:
             if hasattr(element, 'update'):
                 element.update()
+        
+        for function_dict in self.functions:
+            function = function_dict['function']
+            kwargs = function_dict.get('kwargs', {})
+            args = function_dict.get('args', [])
+
+            update_kwargs = function_dict.get('update_kwargs', {})
+            updated_kwargs = kwargs | {key: value() for key, value in update_kwargs.items()}
+
+            update_args = function_dict.get('update_args', [])
+            updated_args = []
+            for i, update_func in enumerate(update_args):
+                arg = args[i]
+                if update_func is not None: arg = update_func()
+                updated_args.append(arg)
+
+            function(*updated_args, **updated_kwargs)
 
     def run(self) -> None:
         self.running = True

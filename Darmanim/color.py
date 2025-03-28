@@ -28,7 +28,7 @@ class Color:
                 self.r, self.g, self.b = color.rgb()
     
     def rgb(self) -> tuple[int, int, int]:
-        return (self.r, self.g, self.b)
+        return (int(self.r), int(self.g), int(self.b))
 
     def lerp(self, other: Color, t: float) -> Color:
         r = self.r + (other.r - self.r) * t
@@ -130,6 +130,7 @@ class Style:
     y_grid_line = Color('#3f3b5a')
     x_axis_line = Color('#9f98bd')
     y_axis_line = Color('#9f98bd')
+    border  = Color.white
     red     = Color.pastelred
     orange  = Color.pastelorange
     yellow  = Color.pastelyellow

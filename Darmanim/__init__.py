@@ -1,5 +1,6 @@
 from Darmanim.animations import *
 from Darmanim.color import *
+from Darmanim.draw import *
 from Darmanim.globals import *
 from Darmanim.graph import *
 from Darmanim.plot import *
