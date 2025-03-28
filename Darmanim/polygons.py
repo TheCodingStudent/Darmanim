@@ -20,8 +20,8 @@ class Polygon:
         self.color = get_color(color)
         self.stroke = get_value(stroke)
 
-    def get_points(self, radius: pixel=10, width: pixel=3, color: any='white', fill: any='black') -> list[Point]:
-        return Point.from_list(self.points, radius, width, color, fill)
+    def get_points(self, radius: pixel=10, stroke: pixel=3, color: any='white', fill: any='black') -> list[Point]:
+        return Point.from_list(self.points, radius, stroke, color, fill)
 
     def update(self) -> None:
         if not hasattr(self, 'graph'): return
@@ -75,7 +75,7 @@ class RegularPolygon(Polygon):
 
         super().update()
     
-    def get_points(self, radius: pixel=10, width: pixel=3, color: any='white', fill: any='black') -> list[Point]:
+    def get_points(self, radius: pixel=10, stroke: pixel=3, color: any='white', fill: any='black') -> list[Point]:
         result = []
 
         self.offset = 1.5*np.pi - np.pi/self.sides
@@ -85,12 +85,12 @@ class RegularPolygon(Polygon):
         for i in range(self.sides.get(int)):
             x = self.x + math.cos(d_angle * i + phase) * self.radius
             y = self.y + math.sin(d_angle * i + phase) * self.radius
-            result.append(Point(x, y, radius, width, color, fill))
+            result.append(Point(x, y, radius, stroke, color, fill))
         
         if self.sides.get() % 1 == 0: return result
         x = self.x + math.cos(d_angle * (i + 1) + phase) * self.radius
         y = self.y + math.sin(d_angle * (i + 1) + phase) * self.radius
-        result.append(Point(x, y, radius, width, color, fill))
+        result.append(Point(x, y, radius, stroke, color, fill))
 
         return result
 
@@ -141,7 +141,7 @@ class Circle(Ellipse):
         self,
         start_angle: degrees, end_angle: degrees|None=None,
         color: any='white', fill: any=None, 
-        radius: pixel=10, width: pixel=3,
+        radius: pixel=10, stroke: pixel=3,
         transition_time: float=1, add: bool=False,
         direction: int=1,
         graph: Graph|None=None
@@ -159,7 +159,7 @@ class Circle(Ellipse):
             x = LerpValue(start_angle, end_angle, transition_time, function=x_func)
             y = LerpValue(start_angle, end_angle, transition_time, function=y_func)
 
-        point = Point(x, y, radius, width, color, fill)
+        point = Point(x, y, radius, stroke, color, fill)
         if add: self.graph.add(point)
         if graph is not None: point.graph = graph
 
@@ -184,14 +184,14 @@ class Rectangle(Polygon):
 
         return Point(0, 0)
 
-    def get_points(self, radius: pixel=10, width: pixel=3, color: any='white', fill: any='black') -> list[Point]:
+    def get_points(self, radius: pixel=10, stroke: pixel=3, color: any='white', fill: any='black') -> list[Point]:
         corners = [
             (self.x - self.width/2, self.y - self.height/2),
             (self.x + self.width/2, self.y - self.height/2),
             (self.x + self.width/2, self.y + self.height/2),
             (self.x - self.width/2, self.y + self.height/2),
         ]
-        return Point.from_list(corners, radius, width, color, fill)
+        return Point.from_list(corners, radius, stroke, color, fill)
 
     def update(self) -> None:
         self.points = np.zeros((180, 2))

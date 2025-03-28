@@ -63,14 +63,14 @@ class Window:
         self.record_time = record_time
         if output != '': self.video = VideoMP4(output, self.screen)
         else: self.video = None
+        self.recording = False
 
         # SETUP
         pygame.display.set_caption(title)
         pygame.display.set_icon(pygame.image.load(icon).convert_alpha())
 
-    def not_record(self) -> None:
-        self.output = ''
-        self.video = None
+    def record(self) -> None:
+        self.recording = True
 
     def add(self, element: any, x: int|None=None, y: int|None=None) -> None:
         self.elements.append(element)
@@ -103,8 +103,8 @@ class Window:
             self.show()
             pygame.display.update()
 
-            if self.output and Clock.time >= 0:
+            if self.recording and self.output and Clock.time >= 0:
                 self.video.write()
                 self.running = not (self.record_time != 0 and Clock.time >= self.record_time + Clock.dt)
         
-        if self.video: self.video.release()
+        if self.recording and self.video: self.video.release()

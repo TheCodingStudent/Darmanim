@@ -38,7 +38,20 @@ class Grid:
         self.y_stroke = y_stroke
 
         self.center = [0, 0]
-    
+
+    def square(
+        size: unit,
+        x_padding: unit=1, y_padding: unit=1,
+        x_interval: unit=1, y_interval: unit=1,
+        x_stroke: pixel=1, y_stroke: pixel=1,
+        x_color: any='x_grid_line', y_color: any='y_grid_line'
+    ) -> Grid:
+        return Grid(
+            -size, size, -size, size,
+            x_padding, y_padding, x_interval, y_interval,
+            x_stroke, y_stroke, x_color, y_color
+        )
+
     def attach(self, graph: Graph) -> Grid:
         self.graph = graph
         self.update()
@@ -108,6 +121,27 @@ class Grid:
         if self.y_color is not None: self.draw_y_lines()
 
 
+class BlankGrid(Grid):
+    def __init__(
+        self,
+        minx: unit=-5, maxx: unit=5,
+        miny: unit=-5, maxy: unit=5,
+        x_padding: unit=1, y_padding: unit=1,
+        x_interval: unit=1, y_interval: unit=1
+    ):
+        super().__init__(minx, maxx, miny, maxy, x_padding, y_padding, x_interval, y_interval, 1, 1, None, None)
+
+    def square(
+        size: unit,
+        x_padding: unit=1, y_padding: unit=1,
+        x_interval: unit=1, y_interval: unit=1
+    ) -> BlankGrid:
+        return BlankGrid(
+            -size, size, -size, size,
+            x_padding, y_padding, x_interval, y_interval
+        )
+
+
 class Arrow:
     def __init__(
         self,
@@ -162,8 +196,8 @@ class Axis:
         draw_y_axis_arrow: bool=True,
         x_axis_color: any='x_axis_line',
         y_axis_color: any='y_axis_line',
-        x_axis_width: pixel=3,
-        y_axis_width: pixel=3
+        x_axis_stroke: pixel=3,
+        y_axis_stroke: pixel=3
     ):
         self.mark_x_at_zero = mark_x_at_zero
         self.mark_y_at_zero = mark_y_at_zero
@@ -171,38 +205,11 @@ class Axis:
         self.draw_y_axis_arrow = draw_y_axis_arrow
         self.x_axis_color = get_color(x_axis_color)
         self.y_axis_color = get_color(y_axis_color)
-        self.x_axis_width = get_value(x_axis_width)
-        self.y_axis_width = get_value(y_axis_width)
+        self.x_axis_stroke = get_value(x_axis_stroke)
+        self.y_axis_stroke = get_value(y_axis_stroke)
     
     def attach(self, graph: Graph) -> Axis:
         self.graph = graph
-
-        width = 4 * self.x_axis_width
-        height = 2 * self.y_axis_width * math.sqrt(3)
-        x_padding = self.graph.grid.x_padding/2
-        y_padding = self.graph.grid.y_padding/2
-        minx = np.min(self.graph.grid.x_range) - x_padding
-        maxx = np.max(self.graph.grid.x_range) + x_padding
-        miny = np.min(self.graph.grid.y_range) - y_padding
-        maxy = np.max(self.graph.grid.y_range) + y_padding
-
-        # self.arrows = []
-        # if self.draw_x_axis_arrow:
-        #     y = 0 if self.mark_y_at_zero else miny
-        #     arrow1 = Arrow((minx, y), (-1, 0), width, height, self.x_axis_color)
-        #     arrow2 = Arrow((maxx, y), (1, 0), width, height, self.x_axis_color)
-        #     arrow1.graph = arrow2.graph = graph
-        #     self.arrows.append(arrow1)
-        #     self.arrows.append(arrow2)
-
-        # if self.draw_y_axis_arrow:
-        #     x = 0 if self.mark_x_at_zero else minx
-        #     arrow1 = Arrow((x, maxy), (0, 1), width, height, self.y_axis_color)
-        #     arrow2 = Arrow((x, miny), (0, -1), width, height, self.y_axis_color)
-        #     arrow1.graph = arrow2.graph = graph
-        #     self.arrows.append(arrow1)
-        #     self.arrows.append(arrow2)
-
         return self
 
     def draw_y_line(self) -> None:
@@ -211,7 +218,7 @@ class Axis:
             else: return
         else: x = self.graph.grid.convert_x_to_pixel(self.graph.grid.minx)
         top, bottom = self.graph.grid.rect.top, self.graph.grid.rect.bottom
-        pygame.draw.line(self.graph.surface, self.y_axis_color.rgb(), (x, top), (x, bottom), self.y_axis_width)
+        pygame.draw.line(self.graph.surface, self.y_axis_color.rgb(), (x, top), (x, bottom), self.y_axis_stroke)
     
     def draw_x_line(self) -> None:
         if self.graph.grid.has_zero_in_y:
@@ -219,13 +226,12 @@ class Axis:
             else: return
         else: y = self.graph.grid.convert_y_to_pixel(self.graph.grid.miny)
         left, right = self.graph.grid.rect.left, self.graph.grid.rect.right
-        pygame.draw.line(self.graph.surface, self.x_axis_color.rgb(), (left, y), (right, y), self.x_axis_width)
+        pygame.draw.line(self.graph.surface, self.x_axis_color.rgb(), (left, y), (right, y), self.x_axis_stroke)
 
     def show(self) -> None:
         if self.x_axis_color: self.draw_x_line()
         if self.y_axis_color: self.draw_y_line()
-        # for arrow in self.arrows: arrow.show()
-            
+
 
 class Graph:
     def __init__(
@@ -272,15 +278,15 @@ class Graph:
         if self.dx is None and self.dy is None: return
         self.grid.center_at(self.dx.get(), self.dy.get())
 
-    def shift(self, dx: unit, dy: unit, transition_time: float=0) -> None:
+    def shift(self, dx: unit, dy: unit, transition_time: float=0, start_time: float=0) -> None:
         self.call_update = True
         dy = -dy
         if transition_time == 0: self.dx, self.dy = get_value(dx), get_value(dy)
         else:
             if self.dx is None: self.dx = 0
             if self.dy is None: self.dy = 0
-            self.dx = LerpValue(self.dx, dx, transition_time)
-            self.dy = LerpValue(self.dy, dy, transition_time)
+            self.dx = LerpValue(self.dx, dx, transition_time, start_time)
+            self.dy = LerpValue(self.dy, dy, transition_time, start_time)
 
     def show(self) -> None:
         self.surface.fill(self.color.rgb())
@@ -303,12 +309,37 @@ class Graph:
         if len(elements) == 1: return elements[0]
         return elements
 
+
+class BlankGraph(Graph):
+    def __init__(
+        self, size: tuple[pixel, pixel],
+        grid: Grid|None=None,
+        color: any=None,
+        border: any='white',
+        border_width: pixel=1
+    ):
+        grid = BlankGrid() if grid is None else grid
+        super().__init__(size, grid, None, color, border, border_width)
+    
+    def show(self) -> None:
+        self.surface.fill(self.color.rgb())
+
+        self.grid.show()
+
+        for element in self.elements:
+            if hasattr(element, 'update'): element.update()
+            element.show()
+
+        self.draw_border()
+        self.screen.blit(self.surface, (self.x, self.y))
+
+
 class Function:
     def __init__(
         self, function: callable,
         resolution: unit=0.01,
         color: any='yellow',
-        width: pixel=1,
+        stroke: pixel=1,
         minx: unit|None=None, maxx: unit|None=None,
         animation_time: any=None,
         antialiasing: bool=False,
@@ -319,7 +350,7 @@ class Function:
         self.call_update = call_update
         self.resolution = get_value(resolution)
         self.color = get_color(color)
-        self.width = get_value(width)
+        self.stroke = get_value(stroke)
 
         self.minx, self.maxx = minx, maxx
 
@@ -331,7 +362,7 @@ class Function:
     
     def point_along(
         self, minx: unit=None, maxx: unit=None,
-        radius: pixel = 10, width: pixel = 3,
+        radius: pixel = 10, stroke: pixel = 3,
         color: any = 'white', fill: any = 'black',
         transition_time: float=1
     ) -> Point:
@@ -340,7 +371,7 @@ class Function:
 
         x = LerpValue(minx, maxx, transition_time)
         y = LerpValue(minx, maxx, transition_time, function=self.function)
-        point = Point(x, y, radius, width, color, fill)
+        point = Point(x, y, radius, stroke, color, fill)
         point.graph = self.graph
         return point
 
@@ -369,13 +400,13 @@ class Function:
         self.update(update_values=True)
     
     def draw_antialiasing(self) -> None:
-        width = self.width.get()
+        stroke = self.stroke.get()
         for p0, p1 in zip(self.coordinates[:-1], self.coordinates[1:]):
             normal = p1 - p0
             magnitude = math.hypot(normal[0], normal[1])
             normal[0], normal[1] = normal[1], -normal[0]
             
-            try: normal = width * normal / (2 * magnitude)
+            try: normal = stroke * normal / (2 * magnitude)
             except ZeroDivisionError: continue
 
             a = p0 + normal
@@ -389,11 +420,11 @@ class Function:
             except ValueError: pass
 
     def show(self) -> None:
-        if self.width.get() == 1:
+        if self.stroke.get() == 1:
             return pygame.draw.aalines(self.graph.surface, self.color.rgb(), False, self.coordinates)
         
         if self.antialiasing: return self.draw_antialiasing()
-        pygame.draw.lines(self.graph.surface, self.color.rgb(), False, self.coordinates, width=self.width.get(int))
+        pygame.draw.lines(self.graph.surface, self.color.rgb(), False, self.coordinates, width=self.stroke.get(int))
 
 
 class AxisLabels:
@@ -453,39 +484,39 @@ class Path:
 
 
 class Point:
-    def __init__(self, x: unit, y: unit, radius: pixel=10, width: pixel=3, color: any='white', fill: any='black'):
+    def __init__(self, x: unit, y: unit, radius: pixel=10, stroke: pixel=3, color: any='white', fill: any=None):
         self.x = get_value(x)
         self.y = get_value(y)
-        self.width = get_value(width)
+        self.stroke = get_value(stroke)
         self.radius = get_value(radius)
 
         self.color = get_color(color)
         self.fill = get_color(fill)
     
-    def vertical_to(self, y: unit, color: any='white', width: pixel=1) -> Line:
+    def vertical_to(self, y: unit, color: any='white', stroke: pixel=1) -> Line:
         other = Point(self.x, y)
-        return Line(self, other, color, width)
+        return Line(self, other, color, stroke)
 
-    def horizontal_to(self, x: unit|Point, color: any='white', width: pixel=1) -> Line:
+    def horizontal_to(self, x: unit|Point, color: any='white', stroke: pixel=1) -> Line:
         if isinstance(x, Point):
             other = Point(x.x, self.y)
             other.graph = x.graph
         else: other = Point(x, self.y)
 
-        return Line(self, other, color, width)
+        return Line(self, other, color, stroke)
 
-    def line_to_point(self, other: Point, color: any='white', width: pixel=1) -> Line:
-        return Line(self, other, color, width)
+    def line_to_point(self, other: Point, color: any='white', stroke: pixel=1) -> Line:
+        return Line(self, other, color, stroke)
 
     def distance_to(self, other: Point) -> float:
         dx = self.x - other.x
         dy = self.y - other.y
         return math.hypot(dx, dy)
 
-    def from_list(points: list[tuple[unit, unit]], radius: pixel=10, width: pixel=3, color: any='white', fill: any='black') -> list[Point]:
+    def from_list(points: list[tuple[unit, unit]], radius: pixel=10, stroke: pixel=3, color: any='white', fill: any='black') -> list[Point]:
         result = []
         for point in points:
-            result.append(Point(*point, radius, width, color, fill))
+            result.append(Point(*point, radius, stroke, color, fill))
         return result
 
     def attach(self, graph: Graph) -> Point:
@@ -496,7 +527,7 @@ class Point:
         x = self.graph.grid.convert_x_to_pixel(self.x.get())
         y = self.graph.grid.convert_y_to_pixel(self.y.get())
         if self.fill: pygame.draw.circle(self.graph.surface, self.fill.rgb(), (x, y), self.radius)
-        pygame.draw.circle(self.graph.surface, self.color.rgb(), (x, y), self.radius, width=self.width)
+        pygame.draw.circle(self.graph.surface, self.color.rgb(), (x, y), self.radius, width=self.stroke)
     
     def __repr__(self) -> str:
         return f'Point({self.x}, {self.y})'
@@ -506,13 +537,13 @@ class Line:
     def __init__(
         self,
         start: tuple[unit, unit]|Point, end: tuple[unit, unit]|Point,
-        color: any='white', width: pixel=1,
+        color: any='white', stroke: pixel=1,
         transition_time: float=0, start_time: float=0
     ):
         self.start = start
         self.end = end
         self.color = get_color(color)
-        self.width = get_value(width)
+        self.stroke = get_value(stroke)
         self.transition_time = transition_time
         self.start_time = start_time
 
@@ -523,13 +554,13 @@ class Line:
 
     def point_along(
         self,
-        radius: pixel = 10, width: pixel = 3,
+        radius: pixel = 10, stroke: pixel = 3,
         color: any = 'white', fill: any = 'black',
         transition_time: float=1
     ) -> Point:
         x = LerpValue(self.x0, self.x1, transition_time)
         y = LerpValue(self.y0, self.y1, transition_time)
-        return Point(x, y, radius, width, color, fill)
+        return Point(x, y, radius, stroke, color, fill)
 
     def get_length(self) -> float:
         dx = self.start[0] - self.end[0]
@@ -565,7 +596,7 @@ class Line:
         end[0] += self.end.graph.x
         end[1] += self.end.graph.y
         
-        pygame.draw.line(self.graph.screen, self.color.rgb(), start, end, width=self.width)
+        pygame.draw.line(self.graph.screen, self.color.rgb(), start, end, width=self.stroke)
 
     def show(self) -> None:
         if self.cross_surface: return self.show_cross_surface()
@@ -578,14 +609,14 @@ class Line:
         start = [self.graph.grid.convert_x_to_pixel(x0), self.graph.grid.convert_y_to_pixel(y0)]
         end = [self.graph.grid.convert_x_to_pixel(x1), self.graph.grid.convert_y_to_pixel(y1)]
         
-        pygame.draw.line(surface, self.color.rgb(), start, end, width=self.width)
+        pygame.draw.line(surface, self.color.rgb(), start, end, width=self.stroke)
 
 
 class Lines:
     def __init__(
         self, points: tuple[tuple[unit, unit]|Point],
         color: any='white', fill: any=None,
-        width: pixel=1, closed: bool=True,
+        stroke: pixel=1, closed: bool=True,
         transition_time: float=0, start_time: float=0
     ):
         self.points = []
@@ -596,13 +627,13 @@ class Lines:
         if closed: self.points.append(self.points[0])
         self.fill = get_color(fill)
         self.color = get_color(color)
-        self.width = get_value(width)
+        self.stroke = get_value(stroke)
         self.transition_time = transition_time
         self.start_time = start_time
     
     def point_along(
         self,
-        radius: pixel = 10, width: pixel = 3,
+        radius: pixel = 10, stroke: pixel = 3,
         color: any = 'white', fill: any = 'black',
         transition_time: float=1
     ) -> Point:

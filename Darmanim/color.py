@@ -85,18 +85,6 @@ Color.greensage   = Color('#92946f')
 Color.greenforest = Color('#6b8c53')
 Color.babypink    = Color('#e3b0b0')
 
-Color.pastelred    = Color('#ff779c')
-Color.pastelorange = Color('#faa39d')
-Color.pastelyellow = Color('#fbf8cc')
-Color.pastelgreen  = Color('#b9fbc0')
-Color.pastelaqua   = Color('#98f5e1')
-Color.pastelcyan   = Color('#8eecf5')
-Color.pastelazure  = Color('#90dbf4')
-Color.pastelblue   = Color('#a3c4f3')
-Color.pastelpurple = Color('#cfbaf0')
-Color.pastelviolet = Color('#f1c0e8')
-Color.pastelpink   = Color('#ffcfd2')
-
 Color.red       = Color('#ff0000')
 Color.orange    = Color('#ff7f00')
 Color.yellow    = Color('#ffff00')
@@ -123,6 +111,18 @@ Color.darkpurple    = Color('#3f007f')
 Color.darkmagenta   = Color('#7f007f')
 Color.darkpink      = Color('#7f003f')
 
+Color.pastelred    = Color('#ff779c')
+Color.pastelorange = Color('#faa39d')
+Color.pastelyellow = Color('#fbf8cc')
+Color.pastelgreen  = Color('#b9fbc0')
+Color.pastelaqua   = Color('#98f5e1')
+Color.pastelcyan   = Color('#8eecf5')
+Color.pastelazure  = Color('#90dbf4')
+Color.pastelblue   = Color('#a3c4f3')
+Color.pastelpurple = Color('#cfbaf0')
+Color.pastelviolet = Color('#f1c0e8')
+Color.pastelpink   = Color('#ffcfd2')
+
 
 class Style:
     background = Color('#232136')
@@ -139,3 +139,4 @@ class Style:
     purple  = Color.pastelpurple
     violet  = Color.pastelviolet
     pink    = Color.pastelpink
+    
