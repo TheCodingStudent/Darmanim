@@ -118,7 +118,6 @@ class Window:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT: self.running = False
             
-            self.update()
             self.show()
             pygame.display.update()
 
@@ -126,4 +125,7 @@ class Window:
                 self.video.write()
                 self.running = not (self.record_time != 0 and Clock.time >= self.record_time + Clock.dt)
         
+            self.update()
+
+        pygame.quit()
         if self.recording and self.video: self.video.release()
