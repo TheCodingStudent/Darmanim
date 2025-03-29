@@ -280,15 +280,15 @@ class Graph:
         if self.dx is None and self.dy is None: return
         self.grid.center_at(self.dx.get(), self.dy.get())
 
-    def shift(self, dx: unit, dy: unit, transition_time: float=0, start_time: float=0) -> None:
+    def center_at(self, x: unit, y: unit, transition_time: float=0, start_time: float=0) -> None:
         self.call_update = True
-        dy = -dy
-        if transition_time == 0: self.dx, self.dy = get_value(dx), get_value(dy)
+        y = -y
+        if transition_time == 0: self.dx, self.dy = get_value(x), get_value(y)
         else:
             if self.dx is None: self.dx = 0
             if self.dy is None: self.dy = 0
-            self.dx = LerpValue(self.dx, dx, transition_time, start_time)
-            self.dy = LerpValue(self.dy, dy, transition_time, start_time)
+            self.dx = LerpValue(self.dx, x, transition_time, start_time)
+            self.dy = LerpValue(self.dy, y, transition_time, start_time)
 
     def show(self) -> None:
         self.surface.fill(self.color.rgb())
