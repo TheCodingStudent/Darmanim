@@ -107,9 +107,8 @@ class Window:
                 if update_func is not None: arg = update_func()
                 updated_args.append(arg)
 
-            # print(updated_args)
-            # print(updated_kwargs)
-            function(*updated_args, **updated_kwargs)
+            try: function(*updated_args, **updated_kwargs)
+            except: print(updated_args, updated_kwargs)
 
     def run(self) -> None:
         self.running = True

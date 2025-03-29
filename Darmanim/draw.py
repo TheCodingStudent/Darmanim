@@ -205,20 +205,22 @@ def animated_line(window: Window, start: coordinate, end: coordinate, color: any
     x0, y0 = get_values(start)
     x1, y1 = get_values(end)
     color = get_color(color)
+    stroke = get_value(stroke)
     t = LerpValue(0, 1, transition_time, start_time)
 
     def draw_line() -> None:
         if t.get() == 0: return
         x = x0.lerp(x1, t.get())
         y = y0.lerp(y1, t.get())
-        pygame.draw.line(window.screen, color.rgb(), (x0, y0), (x, y))
+        pygame.draw.line(window.screen, color.rgb(), (x0, y0), (x, y), width=stroke.get(int))
 
     return window.functions.append({'function': draw_line})
 
 
-def animated_lines(window: Window, points: list[coordinate], color: any='white', stroke: pixel=1, transition_time: float=1, start_time: float=0) -> None:
+def animated_lines(window: Window, points: list[coordinate], color: any='white', closed: bool=False, stroke: pixel=1, transition_time: float=1, start_time: float=0) -> None:
     length = 0
     lengths = []
+    if closed: points.append(points[0])
 
     for (x0, y0), (x1, y1) in zip(points[:-1], points[1:]):
         dist = math.hypot(x1 - x0, y1 - y0)

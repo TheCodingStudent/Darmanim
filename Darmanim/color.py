@@ -1,6 +1,6 @@
 from __future__ import annotations
-from Darmanim.time import time
 from Darmanim.globals import Object
+from Darmanim.time import time, Clock
 
 
 def get_color(value: any) -> Color:
@@ -59,13 +59,16 @@ class Color:
 
 
 class LerpColor(Object):
-    def __init__(self, start: any, end: any, transition_time: time):
-        super().__init__()
+    def __init__(self, start: any, end: any, transition_time: time, start_time: time=0):
+        super().__init__(start_time)
         self.color = self.start = get_color(start)
         self.end = get_color(end)
+
+        self.start_time = start_time
         self.transition_time = transition_time
     
     def update(self) -> bool:
+        # if Clock.time < self.start_time: return False
         t = min(self.time/self.transition_time, 1)
         self.color = self.start + (self.end - self.start) * t
 
@@ -97,6 +100,7 @@ Color.blue      = Color('#0000ff')
 Color.purple    = Color('#7f00ff')
 Color.magenta   = Color('#ff00ff')
 Color.pink      = Color('#ff007f')
+Color.brown     = Color('#6a452c')
 
 Color.darkred       = Color('#7f0000')
 Color.darkorange    = Color('#7f3f00')
@@ -110,6 +114,7 @@ Color.darkblue      = Color('#00007f')
 Color.darkpurple    = Color('#3f007f')
 Color.darkmagenta   = Color('#7f007f')
 Color.darkpink      = Color('#7f003f')
+Color.darkbrown     = Color('#3d2217')
 
 Color.pastelred    = Color('#ff779c')
 Color.pastelorange = Color('#faa39d')
@@ -122,6 +127,21 @@ Color.pastelblue   = Color('#a3c4f3')
 Color.pastelpurple = Color('#cfbaf0')
 Color.pastelviolet = Color('#f1c0e8')
 Color.pastelpink   = Color('#ffcfd2')
+
+
+Color.lightred      = Color('#ff7f7f')
+Color.lightorange   = Color('#ffbf3f')
+Color.lightyellow   = Color('#ffff7f')
+Color.lightlime     = Color('#bfff7f')
+Color.lightgreen    = Color('#00ff7f')
+Color.lightteal     = Color('#7fffbf')
+Color.lightcyan     = Color('#7fffff')
+Color.lightazure    = Color('#7fbfff')
+Color.lightblue     = Color('#7f7fff')
+Color.lightpurple   = Color('#bf7fff')
+Color.lightmagenta  = Color('#ff7fff')
+Color.lightpink     = Color('#ff7fbf')
+Color.lightbrown    = Color('#976841')
 
 
 class Style:
