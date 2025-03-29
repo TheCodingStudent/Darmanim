@@ -40,6 +40,9 @@ class Value:
         if cast is None: return self.value
         return cast(self.value)
     
+    def lerp(self, other: Value, t: float) -> any:
+        return self.value + (other.value - self.value) * t
+
     def __neg__(self) -> Value:
         return Value(-self.value)
 

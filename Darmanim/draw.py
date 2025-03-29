@@ -1,8 +1,9 @@
+import math
 import pygame
 import pygame.gfxdraw
 from Darmanim.window import Window
 from Darmanim.color import get_color
-from Darmanim.globals import get_value, get_values, Value
+from Darmanim.globals import get_value, get_values, Value, LerpValue
 
 type pixel = float
 type rect = tuple[pixel, pixel, pixel, pixel]
@@ -93,13 +94,13 @@ def lines(window: Window, points: list[coordinate], color: any='white', stroke: 
     })
 
 
-def circle(window: Window, center: coordinate, radius: pixel, color: any='white', stroke: pixel=1) -> None:
+def circle(window: Window, center: coordinate, radius: pixel, color: any='white', stroke: pixel=1) -> None:    
     x, y = get_values(center)
     radius = get_value(radius)
     stroke = get_value(stroke)
     color = get_color(color)
 
-    if isinstance(stroke, Value) and stroke == 1:
+    if isinstance(stroke, Value) and stroke == 1 and type(radius) == Value:
         return window.functions.append({
             'function': pygame.gfxdraw.aacircle,
             'args': [window.screen, x, y, radius, color],
@@ -198,3 +199,41 @@ def polygon(window: Window, points: list[coordinate], color: any='white', stroke
             'width': lambda: stroke.get(int)
         }
     })
+
+
+def animated_line(window: Window, start: coordinate, end: coordinate, color: any='white', stroke: pixel=1, transition_time: float=1, start_time: float=0) -> None:
+    x0, y0 = get_values(start)
+    x1, y1 = get_values(end)
+    color = get_color(color)
+    t = LerpValue(0, 1, transition_time, start_time)
+
+    def draw_line() -> None:
+        if t.get() == 0: return
+        x = x0.lerp(x1, t.get())
+        y = y0.lerp(y1, t.get())
+        pygame.draw.line(window.screen, color.rgb(), (x0, y0), (x, y))
+
+    return window.functions.append({'function': draw_line})
+
+
+def animated_lines(window: Window, points: list[coordinate], color: any='white', stroke: pixel=1, transition_time: float=1, start_time: float=0) -> None:
+    length = 0
+    lengths = []
+
+    for (x0, y0), (x1, y1) in zip(points[:-1], points[1:]):
+        dist = math.hypot(x1 - x0, y1 - y0)
+        lengths.append(dist)
+        length += dist
+
+    for i in range(len(points)-1):
+        start, end = points[i], points[i+1]
+        t = transition_time * lengths[i] / length
+        animated_line(window, start, end, color, stroke, t, start_time)
+        start_time += t
+
+
+
+
+
+
+
