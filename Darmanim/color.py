@@ -68,7 +68,6 @@ class LerpColor(Object):
         self.transition_time = transition_time
     
     def update(self) -> bool:
-        # if Clock.time < self.start_time: return False
         t = min(self.time/self.transition_time, 1)
         self.color = self.start + (self.end - self.start) * t
 
@@ -145,19 +144,19 @@ Color.lightbrown    = Color('#976841')
 
 
 class Style:
-    background = Color('#232136')
-    x_grid_line = Color('#3f3b5a')
-    y_grid_line = Color('#3f3b5a')
-    x_axis_line = Color('#9f98bd')
-    y_axis_line = Color('#9f98bd')
+    background = Color('#1a2239')
+    x_grid_line = Color('#99a0ba')
+    y_grid_line = Color('#99a0ba')
+    x_axis_line = Color('#ccd4eb')
+    y_axis_line = Color('#ccd4eb')
     border  = Color.white
-    red     = Color.pastelred
-    orange  = Color.pastelorange
-    yellow  = Color.pastelyellow
-    green   = Color.pastelgreen
-    cyan    = Color.pastelcyan
-    blue    = Color.pastelblue
-    purple  = Color.pastelpurple
-    violet  = Color.pastelviolet
-    pink    = Color.pastelpink
+    red     = Color('#ef346b')
+    yellow  = Color('#fec01f')
+    green   = Color('#3cd68d') 
+    cyan    = Color('#38cbc9') 
+    blue    = Color('#34c1f7')
+    purple  = Color('#9b62d3') 
+    violet  = Color('#dc67cf')
+    white   = Color('#f7f7f7')
+    black   = Color('#202640')
     

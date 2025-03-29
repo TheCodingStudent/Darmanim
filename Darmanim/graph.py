@@ -362,13 +362,13 @@ class Function:
         self, minx: unit=None, maxx: unit=None,
         radius: pixel = 10, stroke: pixel = 3,
         color: any = 'white', fill: any = 'black',
-        transition_time: float=1
+        transition_time: float=1, start_time: float=1
     ) -> Point:
         minx = minx if minx is not None else self.minx if self.minx is not None else self.graph.grid.minx
         maxx = maxx if maxx is not None else self.maxx if self.minx is not None else self.graph.grid.maxx
 
-        x = LerpValue(minx, maxx, transition_time)
-        y = LerpValue(minx, maxx, transition_time, function=self.function)
+        x = LerpValue(minx, maxx, transition_time, start_time)
+        y = LerpValue(minx, maxx, transition_time, start_time, self.function)
         point = Point(x, y, radius, stroke, color, fill)
         point.graph = self.graph
         return point
