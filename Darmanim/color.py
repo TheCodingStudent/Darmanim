@@ -99,7 +99,7 @@ Color.blue      = Color('#0000ff')
 Color.purple    = Color('#7f00ff')
 Color.magenta   = Color('#ff00ff')
 Color.pink      = Color('#ff007f')
-Color.brown     = Color('#6a452c')
+Color.brown     = Color('#754930')
 
 Color.darkred       = Color('#7f0000')
 Color.darkorange    = Color('#7f3f00')
@@ -113,7 +113,7 @@ Color.darkblue      = Color('#00007f')
 Color.darkpurple    = Color('#3f007f')
 Color.darkmagenta   = Color('#7f007f')
 Color.darkpink      = Color('#7f003f')
-Color.darkbrown     = Color('#3d2217')
+Color.darkbrown     = Color('#27160e')
 
 Color.pastelred    = Color('#ff779c')
 Color.pastelorange = Color('#faa39d')
@@ -127,7 +127,6 @@ Color.pastelpurple = Color('#cfbaf0')
 Color.pastelviolet = Color('#f1c0e8')
 Color.pastelpink   = Color('#ffcfd2')
 
-
 Color.lightred      = Color('#ff7f7f')
 Color.lightorange   = Color('#ffbf3f')
 Color.lightyellow   = Color('#ffff7f')
@@ -140,11 +139,11 @@ Color.lightblue     = Color('#7f7fff')
 Color.lightpurple   = Color('#bf7fff')
 Color.lightmagenta  = Color('#ff7fff')
 Color.lightpink     = Color('#ff7fbf')
-Color.lightbrown    = Color('#976841')
+Color.lightbrown    = Color('#ceaf93')
 
 
 class Style:
-    background = Color('#1a2239')
+    background = Color('#272d47')
     x_grid_line = Color('#99a0ba')
     y_grid_line = Color('#99a0ba')
     x_axis_line = Color('#ccd4eb')
@@ -158,5 +157,5 @@ class Style:
     purple  = Color('#9b62d3') 
     violet  = Color('#dc67cf')
     white   = Color('#f7f7f7')
-    black   = Color('#202640')
+    black   = Color('#171d37')
     

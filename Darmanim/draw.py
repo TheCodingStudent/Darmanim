@@ -234,8 +234,12 @@ def animated_lines(window: Window, points: list[coordinate], color: any='white',
         start_time += t
 
 
+def animated_rect(window: Window, rectangle: rect, color: any='white', stroke: pixel=1, transition_time: float=1, start_time: float=0) -> None:
+    x, y, w, h = rectangle
+    topleft = (x, y)
+    topright = (x+w, y)
+    bottomright = (x+w, y+h)
+    bottomleft = (x, y+h)
+    points = [topleft, topright, bottomright, bottomleft]
 
-
-
-
-
+    animated_lines(window, points, color, True, stroke, transition_time, start_time)
