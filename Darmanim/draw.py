@@ -3,7 +3,7 @@ import pygame
 import numpy as np
 from Darmanim.time import Clock
 from Darmanim.window import Window
-from Darmanim.color import get_color
+from Darmanim.color import get_color, LerpColor
 from Darmanim.globals import get_value, get_values, Value, LerpValue
 
 type pixel = float
@@ -268,7 +268,11 @@ class Letter:
         self.window.screen.blit(self.text, self.rect)
     
     def __setattr__(self, name: str, value: any) -> None:
-        if name == 'color': return super().__setattr__(name, get_color(value))
+        if name == 'color':
+            if not hasattr(self, 'color'):
+                return super().__setattr__(name, get_color(value))
+            if type(self.color) == LerpColor:
+                return setattr(self.color, 'end', get_color(value))
         elif name in 'xy': return super().__setattr__(name, get_value(value))
         super().__setattr__(name, value)
 
@@ -321,3 +325,19 @@ class Text:
             return Group([Group(self.letters[i:i+n]) for i in range(self.length - n + 1) if self.font_text[i:i+n] == index])
 
         return self.letters[index]
+    
+
+class AnimatedText(Text):
+    def __init__(
+        self, window: Window,
+        text: str, x: float, y: float,
+        size: int, color: any='white', font: str='cmuserifroman',
+        anchor_x: str='left', anchor_y: str='top',
+        transition_time: float=1, start_time: float=0
+    ):
+        super().__init__(window, text, x, y, size, color, font, anchor_x, anchor_y, start_time)
+
+        transition_time /= self.length
+        for letter in self.letters:
+            letter.color = LerpColor(window.color, letter.color, transition_time, start_time)
+            start_time += transition_time
