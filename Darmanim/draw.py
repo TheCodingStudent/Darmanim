@@ -1,6 +1,7 @@
 import math
 import pygame
-import pygame.gfxdraw
+import numpy as np
+from Darmanim.time import Clock
 from Darmanim.window import Window
 from Darmanim.color import get_color
 from Darmanim.globals import get_value, get_values, Value, LerpValue
@@ -10,236 +11,313 @@ type rect = tuple[pixel, pixel, pixel, pixel]
 type coordinate = tuple[pixel, pixel]
 
 
-def calculate_points(x0: Value, y0: Value, x1: Value, y1: Value, stroke: Value) -> list[pygame.Vector2]:
-    start = pygame.Vector2(x0.get(), y0.get())
-    end = pygame.Vector2(x1.get(), y1.get())
+class Line:
+    def __init__(self, window: Window, start: coordinate, end: coordinate, color: any='white', stroke: pixel=1, start_time: float=0):
+        self.window = window
+        self.x0, self.y0 = get_values(start)
+        self.x1, self.y1 = get_values(end)
+        self.stroke = get_value(stroke)
+        self.color = get_color(color)
+        self.start_time = start_time
 
-    direction = (end - start).normalize()
-    normal = direction.rotate(-90) * stroke.get(int) / 2
-
-    a = start + normal
-    b = end + normal
-    c = end - normal
-    d = start - normal
-
-    return (a, b, c, d)
-
-
-def line(window: Window, start: coordinate, end: coordinate, color: any='white', stroke: pixel=1) -> None:
-    x0, y0 = get_values(start)
-    x1, y1 = get_values(end)
-    stroke = get_value(stroke)
-    color = get_color(color)
-
-    if isinstance(stroke, Value) and stroke == 1:
-        return window.functions.append({
-            'function': pygame.draw.aaline,
-            'kwargs': {
-                'surface': window.screen,
-                'color': color,
-                'start_pos': (x0, y0),
-                'end_pos': (x1, y1)
-            },
-            'update_kwargs': {
-                'color': lambda : color.rgb(),
-                'start_pos': lambda : (x0.get(), y0.get()),
-                'end_pos': lambda : (x1.get(), y1.get()),
-            }
-        })
-
-    return window.functions.append({
-        'function': pygame.gfxdraw.filled_polygon,
-        'args': [window.screen, calculate_points(x0, y0, x1, y1, stroke), color],
-        'update_args': [None, lambda: calculate_points(x0, y0, x1, y1, stroke), lambda: color.rgb()]
-    })
-
-
-def lines(window: Window, points: list[coordinate], color: any='white', stroke: pixel=1) -> None:
-    color = get_color(color)
-    stroke = get_value(stroke)
-    top, bottom = [], []
-
-    for p1, p2 in zip(points[:-1], points[1:]):
-        x0, y0 = get_values(p1)
-        x1, y1 = get_values(p2)
-
-        a, b, c, d = calculate_points(x0, y0, x1, y1, stroke)
-        top.extend((a, b))
-        bottom.extend((d, c))
-
-    if isinstance(stroke, Value) and stroke == 1:
-        return window.functions.append({
-            'function': pygame.draw.aalines,
-            'kwargs': {
-                'surface': window.screen,
-                'color': color,
-                'closed': False,
-                'points': points
-            },
-            'update_kwargs': {
-                'color': lambda: color.rgb()
-            }
-        })
-
-    window.functions.append({
-        'function': pygame.gfxdraw.aapolygon,
-        'args': [window.screen, top + bottom[::-1], color],
-        'update_args': [None, None, lambda: color.rgb()]
-    })
-
-    window.functions.append({
-        'function': pygame.gfxdraw.filled_polygon,
-        'args': [window.screen, top + bottom[::-1], color],
-        'update_args': [None, None, lambda: color.rgb()]
-    })
-
-
-def circle(window: Window, center: coordinate, radius: pixel, color: any='white', stroke: pixel=1) -> None:    
-    x, y = get_values(center)
-    radius = get_value(radius)
-    stroke = get_value(stroke)
-    color = get_color(color)
-
-    if isinstance(stroke, Value) and stroke == 1 and type(radius) == Value:
-        return window.functions.append({
-            'function': pygame.gfxdraw.aacircle,
-            'args': [window.screen, x, y, radius, color],
-            'update_args': [None, lambda: x.get(), lambda: y.get(), lambda: radius.get(), lambda: color.rgb()]
-        })
-
-    return window.functions.append({
-        'function': pygame.draw.circle,
-        'kwargs': {
-            'surface': window.screen,
-            'color': color,
-            'center': (x, y),
-            'radius': radius,
-            'width': stroke
-        },
-        'update_kwargs': {
-            'color': lambda: color.rgb(),
-            'center': lambda: (x.get(), y.get()),
-            'radius': lambda: radius.get(),
-            'width': lambda: stroke.get(int)
-        }
-    })
-
-
-def ellipse(window: Window, center: coordinate, rx: pixel, ry: pixel, color: any='white', stroke: pixel=1) -> None:
-    x, y = get_values(center)
-    rx, ry = get_value(rx), get_value(ry)
-    stroke = get_value(stroke)
-    color = get_color(color)
-
-    if isinstance(stroke, Value) and stroke == 1:
-        return window.functions.append({
-            'function': pygame.gfxdraw.aaellipse,
-            'args': [window.screen, x, y, rx, ry, color],
-            'update_args': [None, lambda: x.get(), lambda: y.get(), lambda: rx.get(), lambda: ry.get(), lambda: color.rgb()]
-        })
-
-    return window.functions.append({
-        'function': pygame.draw.ellipse,
-        'kwargs': {
-            'surface': window.screen,
-            'color': color,
-            'rect': (x, y, rx, ry),
-            'width': stroke
-        },
-        'update_kwargs': {
-            'color': lambda: color.rgb(),
-            'rect': lambda: (x.get()-rx.get(), y.get()-ry.get(), 2*rx.get(), 2*ry.get()),
-            'width': lambda: stroke.get(int)
-        }
-    })
-
-
-def rectangle(window: Window, rectangle: rect, color: any='white', stroke: pixel=1) -> None:
-    x0, y0, x1, y1 = get_values(rectangle)
-    color = get_color(color)
-    stroke = get_value(stroke)
-
-    return window.functions.append({
-        'function': pygame.draw.rect,
-        'kwargs': {
-            'surface': window.screen,
-            'color': color,
-            'rect': (x0, y0, x1, y1),
-            'width': stroke
-        },
-        'update_kwargs': {
-            'color': lambda: color.rgb(),
-            'rect': lambda: (x0.get(), y0.get(), x1.get(), y1.get()),
-            'width': lambda: stroke.get(int)
-        }
-    })
-
-
-def polygon(window: Window, points: list[coordinate], color: any='white', stroke: pixel=1) -> None:
-    color = get_color(color)
-    stroke = get_value(stroke)
-
-    if isinstance(stroke, Value) and stroke == 1:
-        return window.functions.append({
-            'function': pygame.gfxdraw.aapolygon,
-            'args': [window.screen, points, color],
-            'update_args': [None, None, lambda: color.rgb()]
-        })
+        window.elements.append(self)
     
-    return window.functions.append({
-        'function': pygame.draw.polygon,
-        'kwargs': {
-            'surface': window.screen,
-            'color': color,
-            'points': points,
-            'width': stroke
-        },
-        'update_kwargs': {
-            'color': lambda: color.rgb(),
-            'width': lambda: stroke.get(int)
-        }
-    })
+    def show(self) -> None:
+        if Clock.time < self.start_time: return
+        start, end = (self.x0.get(), self.y0.get()), (self.x1.get(), self.y1.get())
+        pygame.draw.line(self.window.screen, self.color.rgb(), start, end, self.stroke.get(int))
 
 
-def animated_line(window: Window, start: coordinate, end: coordinate, color: any='white', stroke: pixel=1, transition_time: float=1, start_time: float=0) -> None:
-    x0, y0 = get_values(start)
-    x1, y1 = get_values(end)
-    color = get_color(color)
-    stroke = get_value(stroke)
-    t = LerpValue(0, 1, transition_time, start_time)
+class Lines:
+    def __init__(self, window: Window, points: list[coordinate], color: any='white', closed: bool=False, stroke: pixel=1, start_time: float=0):
+        self.window = window
+        self.points = [get_values(point) for point in points]
+        self.closed = closed
+        self.color = get_color(color)
+        self.stroke = get_value(stroke)
+        self.start_time = start_time
 
-    def draw_line() -> None:
-        if t.get() == 0: return
-        x = x0.lerp(x1, t.get())
-        y = y0.lerp(y1, t.get())
-        pygame.draw.line(window.screen, color.rgb(), (x0, y0), (x, y), width=stroke.get(int))
+        f = lambda p: type(p[0]) != Value or type(p[1]) != Value
+        self.should_update = any(map(f, self.points)) 
 
-    return window.functions.append({'function': draw_line})
-
-
-def animated_lines(window: Window, points: list[coordinate], color: any='white', closed: bool=False, stroke: pixel=1, transition_time: float=1, start_time: float=0) -> None:
-    length = 0
-    lengths = []
-    if closed: points.append(points[0])
-
-    for (x0, y0), (x1, y1) in zip(points[:-1], points[1:]):
-        dist = math.hypot(x1 - x0, y1 - y0)
-        lengths.append(dist)
-        length += dist
-
-    for i in range(len(points)-1):
-        start, end = points[i], points[i+1]
-        t = transition_time * lengths[i] / length
-        animated_line(window, start, end, color, stroke, t, start_time)
-        start_time += t
+        self.update(update_values=True)
+        window.elements.append(self)
+    
+    def update(self, update_values: bool=False) -> None:
+        if not update_values:
+            if Clock.time < self.start_time or not self.should_update: return
+        self.coordinates = [(x.get(), y.get()) for x, y in self.points]
+    
+    def show(self) -> None:
+        if Clock.time < self.start_time: return
+        pygame.draw.lines(self.window.screen, self.color.rgb(), self.closed, self.coordinates, self.stroke.get(int))
 
 
-def animated_rect(window: Window, rectangle: rect, color: any='white', stroke: pixel=1, transition_time: float=1, start_time: float=0) -> None:
-    x, y, w, h = rectangle
-    topleft = (x, y)
-    topright = (x+w, y)
-    bottomright = (x+w, y+h)
-    bottomleft = (x, y+h)
-    points = [topleft, topright, bottomright, bottomleft]
+class Circle:
+    def __init__(self, window: Window, center: tuple[pixel, pixel], radius: pixel, color: any='white', stroke: pixel=1, start_time: float=0):
+        self.window = window
+        self.x, self.y = get_values(center)
+        self.radius = get_value(radius)
+        self.color = get_color(color)
+        self.stroke = get_value(stroke)
 
-    animated_lines(window, points, color, True, stroke, transition_time, start_time)
+        self.should_update = type(self.x) != Value or type(self.y) != Value
+        self.start_time = start_time
+
+        self.update(update_values=True)
+        window.elements.append(self)
+    
+    def update(self, update_values: bool=False) -> None:
+        if not update_values:
+            if Clock.time < self.start_time or not self.should_update: return
+        self.center = (self.x.get(), self.y.get())
+    
+    def show(self) -> None:
+        if Clock.time < self.start_time: return
+        pygame.draw.circle(self.window.screen, self.color.rgb(), self.center, self.radius.get(), self.stroke.get(int))
+
+
+class Ellipse:
+    def __init__(self, window: Window, center: tuple[pixel, pixel], rx: pixel, ry: pixel, color: any='white', stroke: pixel=1, start_time: float=0):
+        self.window = window
+        self.x, self.y = get_values(center)
+        self.rx, self.ry = get_value(rx), get_value(ry)
+        self.color = get_color(color)
+        self.stroke = get_value(stroke)
+
+        self.should_update = type(self.x) != Value or type(self.y) != Value or type(self.rx) != Value or type(self.ry) != Value
+        self.start_time = start_time
+
+        self.update(update_values=True)
+        window.elements.append(self)
+    
+    def update(self, update_values: bool=False) -> None:
+        if not update_values:
+            if Clock.time < self.start_time or not self.should_update: return
+        rx, ry = self.rx.get(), self.ry.get()
+        self.rect = (self.x.get()-rx, self.y.get()-ry, 2*rx, 2*ry)
+    
+    def show(self) -> None:
+        if Clock.time < self.start_time: return
+        pygame.draw.ellipse(self.window.screen, self.color.rgb(), self.rect, self.stroke.get(int))
+
+
+class Rectangle:
+    def __init__(self, window: Window, rectangle: rect, color: any='white', stroke: pixel=1, start_time: float=0):
+        self.window = window
+        self.x, self.y, self.w, self.h = rectangle
+        self.color = color
+        self.stroke = stroke
+
+        self.should_update = type(self.x) != Value or type(self.y) != Value or type(self.w) != Value or type(self.h) != Value
+        self.start_time = start_time
+
+        self.update(update_values=True)
+        window.elements.append(self)
+    
+    def update(self, update_values: bool=False) -> None:
+        if not update_values:
+            if Clock.time < self.start_time or not self.should_update: return
+        self.rect = (self.x.get(), self.y.get(), self.w.get(), self.h.get())
+    
+    def show(self) -> None:
+        if Clock.time < self.start_time: return
+        pygame.draw.rect(self.window.screen, self.color.rgb(), self.rect, self.stroke.get(int))
+
+    def __setattr__(self, name: str, value: any):
+        if name in ('x', 'y', 'w', 'h', 'stroke'): return super().__setattr__(name, get_value(value))
+        if name == 'color': return super().__setattr__(name, get_color(value))
+        return super().__setattr__(name, value)
+
+
+class Polygon:
+    def __init__(self, window: Window, points: list[coordinate], color: any='white', stroke: pixel=1, start_time: float=0):
+        self.window = window
+        self.points = points
+
+        self.color = get_color(color)
+        self.stroke = get_value(stroke)
+
+        f = lambda p: type(p[0]) != Value or type(p[1]) != Value
+        self.should_update = any(map(f, self.points))
+        self.start_time = start_time
+
+        self.update(update_values=True)
+        window.elements.append(self)
+    
+    def update(self, update_values: bool=False) -> None:
+        if not update_values:
+            if Clock.time < self.start_time or not self.should_update: return
+        self.coordinates = [(x.get(), y.get()) for x, y in self.points]
+    
+    def show(self) -> None:
+        if Clock.time < self.start_time: return
+        pygame.draw.polygon(self.window.screen, self.color.rgb(), self.coordinates, self.stroke.get(int))
+
+
+class RegularPolygon(Polygon):
+    def __init__(self, window: Window, center: tuple[pixel, pixel], radius: pixel, sides: float, phase: float=0, color: any='white', stroke: pixel=1, start_time: float=0):
+        self.x, self.y = get_values(center)
+        self.radius = get_value(radius)
+        self.sides = get_value(sides)
+        self.phase = get_value(phase)
+        self.should_update = type(self.sides) != Value or type(self.x) != Value or type(self.y) != Value or type(self.radius) != Value
+        super().__init__(window, [], color, stroke, start_time)
+
+    def update(self, update_values: bool=False) -> None:
+        if not update_values:
+            if Clock.time < self.start_time or not self.should_update: return
+
+        offset = 1.5*math.pi - math.pi/self.sides
+        self.coordinates = np.zeros((180, 2))
+        phase = self.phase.get() + offset
+        d_angle = 2*math.pi/self.sides
+
+        for i in range(self.sides.get(int)):
+            a = int(180 * i /  self.sides)
+            b = int(180 * (i + 1) /  self.sides)
+            self.coordinates[a:b, 0] = self.x.get() + math.cos(d_angle * i + phase) * self.radius.get()
+            self.coordinates[a:b, 1] = self.y.get() + math.sin(d_angle * i + phase) * self.radius.get()
+        
+        self.coordinates[b:, 0] = self.x.get() + math.cos(d_angle * (i + 1) + phase) * self.radius.get()
+        self.coordinates[b:, 1] = self.y.get() + math.sin(d_angle * (i + 1) + phase) * self.radius.get()
+
+
+class AnimatedLine:
+    def __init__(self, window: Window, start: coordinate, end: coordinate, color: any='white', stroke: pixel=1, transition_time: float=1, start_time: float=0):
+        self.window = window
+        self.x0, self.y0 = get_values(start)
+        self.x1, self.y1 = get_values(end)
+        self.x = LerpValue(self.x0, self.x1, transition_time, start_time)
+        self.y = LerpValue(self.y0, self.y1, transition_time, start_time)
+
+        self.stroke = get_value(stroke)
+        self.color = get_color(color)
+        self.start_time = start_time
+
+        window.elements.append(self)
+    
+    def show(self) -> None:
+        if Clock.time < self.start_time: return
+        start, end = (self.x0.get(), self.y0.get()), (self.x.get(), self.y.get())
+        pygame.draw.line(self.window.screen, self.color.rgb(), start, end, self.stroke.get(int))
+
+
+class AnimatedLines:
+    def __init__(self, window: Window, points: list[coordinate], color: any='white', stroke: pixel=1, transition_time: float=1, start_time: float=0):
+        self.lines = []
+
+        length, lengths = 0, []
+        for (x0, y0), (x1, y1) in zip(points[:-1], points[1:]):
+            lengths.append(math.hypot(x1 - x0, y1 - y0))
+            length += lengths[-1]
+        
+        for i, (start, end) in enumerate(zip(points[:-1], points[1:])):
+            t = lengths[i] / length
+            line = AnimatedLine(window, start, end, color, stroke, t, start_time)
+            self.lines.append(line)
+            start_time += t
+
+
+class Group:
+    def __init__(self, elements: list[any]):
+        self._elements = elements
+        self.n = len(self._elements)
+    
+    def __setattr__(self, name: str, value: any) -> None:
+        if name in ('_elements', 'n'): return super().__setattr__(name, value) 
+        if isinstance(value, (tuple, list)):
+            for i, val in enumerate(value[:self.n]): setattr(self._elements[i], name, val)
+        else:
+            for i, element in enumerate(self._elements): setattr(element, name, value)
+    
+    def __getitem__(self, index: int|slice|str) -> any:
+        if isinstance(index, slice):
+            return Group(self._elements[index])
+        if isinstance(index, str):
+            return Group([letter for letter in self.letters if letter.font_text in index])
+        return self._elements[index]
+
+
+class Letter:
+    def __init__(
+        self, window: Window,
+        text: str, x: float, y: float,
+        size: int, color: any='white', font: str='cmuserifroman',
+        start_time: float=0
+    ):
+        self.window = window
+        self.font_text = text
+        self.font_name = font
+        self.font_size = size
+
+        self.x, self.y = x, y
+        self.color = color
+        self.start_time = start_time
+
+        self.update(update_values=True)
+    
+    def update(self, update_values: bool=False) -> None:
+        if Clock.time < self.start_time and not update_values: return
+        self.font = pygame.font.SysFont(self.font_name, self.font_size)
+        self.text = self.font.render(self.font_text, True, self.color.rgb())
+        self.rect = self.text.get_rect(topleft=(self.x.get(), self.y.get()))
+    
+    def show(self) -> None:
+        if Clock.time < self.start_time: return
+        self.window.screen.blit(self.text, self.rect)
+    
+    def __setattr__(self, name: str, value: any) -> None:
+        if name == 'color': return super().__setattr__(name, get_color(value))
+        elif name in 'xy': return super().__setattr__(name, get_value(value))
+        super().__setattr__(name, value)
+
+
+class Text:
+    def __init__(
+        self, window: Window,
+        text: str, x: float, y: float,
+        size: int, color: any='white', font: str='cmuserifroman',
+        anchor_x: str='left', anchor_y: str='top',
+        start_time: float=0
+    ):
+        self.letters = []
+        self.font_text = text
+        self.start_x, self.start_y = x, y
+        for letter in text:
+            self.letters.append(Letter(window, letter, x, y, size, color, font, start_time))
+            x += self.letters[-1].rect.width
+
+        self.length = len(self.letters)
+        self.width = x - self.start_x
+        self.height = y - self.start_y + pygame.font.SysFont(font, size).get_height()
+        if anchor_x == 'centerx': offset_x = -self.width/2
+        elif anchor_x == 'right': offset_x = -self.width
+        else: offset_x = 0
+
+        if anchor_y == 'centery': offset_y = -self.height/2
+        elif anchor_y == 'bottom': offset_y = self.height
+        else: offset_y = 0
+
+        for letter in self.letters:
+            letter.x += offset_x
+            letter.y += offset_y
+
+        window.elements.append(self)
+
+    def update(self, update_values: bool=False) -> None:
+        for letter in self.letters: letter.update()
+    
+    def show(self) -> None:
+        for letter in self.letters: letter.show()
+    
+    def __getitem__(self, index: int|slice|str) -> Letter:
+        if isinstance(index, slice):
+            return Group(self.letters[index])
+        if isinstance(index, str):
+            n = len(index)
+            if n == 1:
+                return Group([letter for letter in self.letters if letter.font_text == index])
+            return Group([Group(self.letters[i:i+n]) for i in range(self.length - n + 1) if self.font_text[i:i+n] == index])
+
+        return self.letters[index]

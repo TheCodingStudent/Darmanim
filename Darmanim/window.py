@@ -3,7 +3,7 @@ import pygame
 import subprocess
 from Darmanim.time import Clock
 from Darmanim.globals import Object
-from Darmanim.color import Color, get_color
+from Darmanim.color import get_color
 
 
 class VideoMP4:
@@ -50,7 +50,6 @@ class Window:
         pygame.init()
         Clock.fps = fps
 
-        # PROPERTIES
         if size == (0, 0) and flags == 0: flags = pygame.FULLSCREEN
         self.screen = pygame.display.set_mode(size, flags)
         self.color = get_color(color)
@@ -59,14 +58,12 @@ class Window:
 
         self.width, self.height = self.screen.get_size()
 
-        # VIDEO WRITER
         self.output = output
         self.record_time = record_time
         if output != '': self.video = VideoMP4(output, self.screen)
         else: self.video = None
         self.recording = False
 
-        # SETUP
         pygame.display.set_caption(title)
         pygame.display.set_icon(pygame.image.load(icon).convert_alpha())
 
@@ -90,25 +87,7 @@ class Window:
 
         for element in self.elements:
             if hasattr(element, 'update'):
-                element.update()
-        
-        for function_dict in self.functions:
-            function = function_dict['function']
-            kwargs = function_dict.get('kwargs', {})
-            args = function_dict.get('args', [])
-
-            update_kwargs = function_dict.get('update_kwargs', {})
-            updated_kwargs = kwargs | {key: value() for key, value in update_kwargs.items()}
-
-            update_args = function_dict.get('update_args', [])
-            updated_args = []
-            for i, update_func in enumerate(update_args):
-                arg = args[i]
-                if update_func is not None: arg = update_func()
-                updated_args.append(arg)
-
-            try: function(*updated_args, **updated_kwargs)
-            except: print(updated_args, updated_kwargs)
+                element.update(True)
 
     def run(self) -> None:
         self.running = True
@@ -127,6 +106,5 @@ class Window:
                 self.video.write()
                 self.running = not (self.record_time != 0 and Clock.time >= self.record_time + Clock.dt)
         
-
         pygame.quit()
         if self.recording and self.video: self.video.release()

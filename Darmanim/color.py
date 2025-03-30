@@ -1,13 +1,18 @@
 from __future__ import annotations
+import math
+from Darmanim.time import time
 from Darmanim.globals import Object
-from Darmanim.time import time, Clock
 
 
 def get_color(value: any) -> Color:
     if value is None: return None
     if isinstance(value, str) and hasattr(Style, value): return getattr(Style, value)
-    if isinstance(value, (Color, LerpColor)): return value
+    if isinstance(value, (Color, LerpColor, SwitchColor)): return value
     return Color(value)
+
+
+def lerp(start: float, end: float, t: float) -> float:
+    return start + (end - start) * t
 
 
 class Color:
@@ -31,9 +36,20 @@ class Color:
         return (int(self.r), int(self.g), int(self.b))
 
     def lerp(self, other: Color, t: float) -> Color:
-        r = self.r + (other.r - self.r) * t
-        g = self.g + (other.g - self.g) * t
-        b = self.b + (other.b - self.b) * t
+        r = lerp(self.r, other.r, t)
+        g = lerp(self.g, other.g, t)
+        b = lerp(self.b, other.b, t)
+        return Color((r, g, b))
+    
+    def slerp(self, other: Color, t: float) -> Color:
+        r1, r2 = (self.r/255)**2, (other.r/255)**2
+        g1, g2 = (self.g/255)**2, (other.g/255)**2
+        b1, b2 = (self.b/255)**2, (other.b/255)**2
+
+        r = 255 * math.sqrt(lerp(r1, r2, t))
+        g = 255 * math.sqrt(lerp(g1, g2, t))
+        b = 255 * math.sqrt(lerp(b1, b2, t))
+
         return Color((r, g, b))
     
     def __add__(self, other: Color) -> Color:
@@ -56,6 +72,20 @@ class Color:
 
     def __repr__(self) -> str:
         return f'{self.rgb()=}'
+
+
+class SwitchColor(Object):
+    def __init__(self, start: any, end: any, switch_time: time):
+        super().__init__()
+        self.start = get_color(start)
+        self.end = get_color(end)
+        self.switch_time = switch_time
+    
+    def update(self) -> None:
+        self.color = self.start if self.time < self.switch_time else self.end
+
+    def rgb(self) -> tuple[int, int, int]:
+        return self.color.rgb()
 
 
 class LerpColor(Object):
@@ -150,6 +180,7 @@ class Style:
     y_axis_line = Color('#ccd4eb')
     border  = Color.white
     red     = Color('#ef346b')
+    orange  = Color('#dc8c69')
     yellow  = Color('#fec01f')
     green   = Color('#3cd68d') 
     cyan    = Color('#38cbc9') 
