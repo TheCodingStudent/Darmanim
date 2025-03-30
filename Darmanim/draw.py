@@ -4,7 +4,7 @@ import numpy as np
 from Darmanim.time import Clock
 from Darmanim.window import Window
 from Darmanim.color import get_color, LerpColor
-from Darmanim.globals import get_value, get_values, Value, LerpValue
+from Darmanim.values import get_value, get_values, Value, LerpValue
 
 type pixel = float
 type rect = tuple[pixel, pixel, pixel, pixel]
@@ -204,19 +204,44 @@ class AnimatedLine:
 
 
 class AnimatedLines:
-    def __init__(self, window: Window, points: list[coordinate], color: any='white', stroke: pixel=1, transition_time: float=1, start_time: float=0):
-        self.lines = []
+    def __init__(self, window: Window, points: list[coordinate], color: any='white', closed: bool=False, stroke: pixel=1, transition_time: float=1, start_time: float=0):
 
-        length, lengths = 0, []
+        accumulated_lengths = [0]
+        if closed: points = list(points) + [points[0]]
         for (x0, y0), (x1, y1) in zip(points[:-1], points[1:]):
-            lengths.append(math.hypot(x1 - x0, y1 - y0))
-            length += lengths[-1]
+            accumulated_lengths.append(math.hypot(x1 - x0, y1 - y0) + accumulated_lengths[-1])
         
-        for i, (start, end) in enumerate(zip(points[:-1], points[1:])):
-            t = lengths[i] / length
-            line = AnimatedLine(window, start, end, color, stroke, t, start_time)
-            self.lines.append(line)
-            start_time += t
+        self.t_values = [length/accumulated_lengths[-1] for length in accumulated_lengths]
+
+        self.window = window
+        self.points = points
+        self.color = get_color(color)
+        self.stroke = get_value(stroke)
+        self.start_time = start_time
+        self.transition_time = transition_time
+
+        window.elements.append(self)
+
+    def draw_line(self, index: int) -> None:
+        time_t = (Clock.time - self.start_time) / self.transition_time - self.t_values[index]
+        if time_t < 0: return
+
+        total_t = self.t_values[index+1] - self.t_values[index]
+        t = time_t / total_t
+        (x0, y0), (x1, y1) = self.points[index], self.points[index + 1]
+
+        if t >= 1:
+            return pygame.draw.line(self.window.screen, self.color.rgb(), (x0, y0), (x1, y1), self.stroke.get(int))
+        
+        x, y = x0 + (x1 - x0) * t, y0 + (y1 - y0) * t
+        pygame.draw.line(self.window.screen, self.color.rgb(), (x0, y0), (x, y), self.stroke.get(int))
+
+    def show(self) -> None:
+        if Clock.time < self.start_time: return
+
+        for i in range(len(self.points) - 1):
+            self.draw_line(i)
+
 
 
 class Group:

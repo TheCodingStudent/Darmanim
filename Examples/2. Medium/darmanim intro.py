@@ -1,6 +1,6 @@
 from Darmanim.window import Window
 from Darmanim.color import LerpColor
-from Darmanim.globals import LerpValue, SequenceValue
+from Darmanim.values import LerpValue, SequenceValue
 from Darmanim.draw import Text, Line, AnimatedLines, Circle, Rectangle, Ellipse, RegularPolygon
 
 if __name__ == '__main__':

@@ -1,6 +1,6 @@
 from __future__ import annotations
 import numpy as np
-from Darmanim.globals import LerpValue
+from Darmanim.values import LerpValue
 
 
 def draw(animation_time: float=1, start_time: float=0, default: any=0):

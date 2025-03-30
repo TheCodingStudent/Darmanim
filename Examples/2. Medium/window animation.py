@@ -1,7 +1,7 @@
 import numpy as np
 from Darmanim.window import Window
 from Darmanim.animations import draw
-from Darmanim.globals import LerpValue
+from Darmanim.values import LerpValue
 from Darmanim.graph import Graph, Function
 
 

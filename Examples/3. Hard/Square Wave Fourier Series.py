@@ -1,7 +1,7 @@
 import numpy as np
 from Darmanim.window import Window
 from Darmanim.polygons import Circle
-from Darmanim.globals import ContinuosValue
+from Darmanim.values import ContinuosValue
 from Darmanim.graph import Graph, Grid, Point, Path, BlankGrid, BlankGraph, Function
 
 def square_wave(x: np.array) -> np.array:

@@ -3,7 +3,7 @@ import pygame
 from Darmanim.window import Window
 from Darmanim.color import get_color
 from Darmanim.graph import Grid, Axis
-from Darmanim.globals import get_value
+from Darmanim.values import get_value
 
 type coordinate = list[tuple[float, float]]
 

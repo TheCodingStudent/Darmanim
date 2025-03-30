@@ -1,8 +1,11 @@
-from Darmanim import *
+from Darmanim.window import Window
+from Darmanim.values import LerpValue
+from Darmanim.color import LerpColor, Color
+from Darmanim.draw import AnimatedLines, Circle, AnimatedLine
 
 
 if __name__ == '__main__':
-    window = Window(size=(0, 0), output='contour lines.mp4', record_time=20)
+    window = Window(size=(0, 0), output='contour lines.mp4', record_time=20, fps=240)
     folder = 'c:/users/angel/desktop/uach/semestre 8/cartografia/modelo cerro del pescadito/darmanim/'
 
     contour_x = window.width - 900
@@ -15,21 +18,21 @@ if __name__ == '__main__':
         for x in range(contour_x, 900+contour_x, 100):
             color = LerpColor(Color.red, 'white', 10*time, start_time)
             radius = LerpValue(0, 5, time, start_time)
-            circle(window, (x, y), radius, color, stroke=0)
+            Circle(window, (x, y), radius, color, stroke=0)
 
-            animated_line(window, (210, ty), (810, ty), 'white', 1, time, start_time)
+            AnimatedLine(window, (210, ty), (810, ty), 'white', 1, time, start_time)
             ty += 980/81
             start_time += time
 
-    time = 0.1
+    time = 0.05
     for i in range(8):
         y0 = y1 = 100*i + contour_y
         y2 = y3 = y0 + 100
         for j in range(8):
             x0 = x2 = 100*j + contour_x
             x1 = x3 = x0 + 100
-            animated_lines(window, [(x0, y0), (x1, y1), (x2, y2)], 'gray', True, 1, 4*time, start_time)
-            animated_lines(window, [(x1, y1), (x2, y2), (x3, y3)], 'gray', True, 1, 4*time, start_time)
+            AnimatedLines(window, [(x0, y0), (x1, y1), (x2, y2)], 'gray', True, 1, 4*time, start_time)
+            AnimatedLines(window, [(x1, y1), (x2, y2), (x3, y3)], 'gray', True, 1, 4*time, start_time)
             start_time += time
 
     time = 1.5
@@ -42,7 +45,7 @@ if __name__ == '__main__':
 
             color = 'brown' if elevation % 100 else 'lightbrown' 
             closed = elevation > 1600
-            animated_lines(window, points, color, closed, 3, time, start_time)
+            AnimatedLines(window, points, color, closed, 3, time, start_time)
             start_time += time
 
     window.run()

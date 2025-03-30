@@ -3,11 +3,10 @@ import math
 import pygame
 import numpy as np
 import pygame.gfxdraw
-# from Darmanim.draw import lines
 from Darmanim.time import Clock
 from Darmanim.window import Window
 from Darmanim.color import get_color
-from Darmanim.globals import get_value, LerpValue
+from Darmanim.values import get_value, LerpValue
 
 type unit = float
 type pixel = float

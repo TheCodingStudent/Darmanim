@@ -1,7 +1,7 @@
 from __future__ import annotations
 import math
 from Darmanim.time import time
-from Darmanim.globals import Object
+from Darmanim.values import Object
 
 
 def get_color(value: any) -> Color:

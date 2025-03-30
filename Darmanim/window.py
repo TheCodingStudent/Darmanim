@@ -2,7 +2,7 @@ import os
 import pygame
 import subprocess
 from Darmanim.time import Clock
-from Darmanim.globals import Object
+from Darmanim.values import Object
 from Darmanim.color import get_color
 
 

@@ -5,7 +5,7 @@ import numpy as np
 import pygame.gfxdraw
 from Darmanim.color import get_color
 from Darmanim.graph import Graph, Point, unit, pixel
-from Darmanim.globals import get_value, LerpValue, ContinuosValue
+from Darmanim.values import get_value, LerpValue, ContinuosValue
 
 
 type degrees = float
