@@ -243,7 +243,6 @@ class AnimatedLines:
             self.draw_line(i)
 
 
-
 class Group:
     def __init__(self, elements: list[any]):
         self._elements = elements

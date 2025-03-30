@@ -57,12 +57,18 @@ class Color:
         g = self.g + other.g
         b = self.b + other.b
         return Color((r, g, b))
+
+    def __radd__(self, other: Color) -> Color:
+        return self + other
     
     def __sub__(self, other: Color) -> Color:
         r = self.r - other.r
         g = self.g - other.g
         b = self.b - other.b
         return Color((r, g, b))
+    
+    def __rsub__(self, other: Color) -> Color:
+        return other - self
 
     def __mul__(self, other: float) -> Color:
         r = self.r * other
@@ -100,6 +106,8 @@ class LerpColor(Object):
     def update(self) -> bool:
         t = min(self.time/self.transition_time, 1)
         self.color = self.start + (self.end - self.start) * t
+
+        self.r, self.g, self.b = self.color.rgb()
 
         return t == 1
     
