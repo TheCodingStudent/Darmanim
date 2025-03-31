@@ -12,7 +12,12 @@ type coordinate = tuple[pixel, pixel]
 
 
 class Line:
-    def __init__(self, window: Window, start: coordinate, end: coordinate, color: any='white', stroke: pixel=1, start_time: float=0):
+    def __init__(
+        self, window: Window,
+        start: coordinate, end: coordinate,
+        color: any='white', stroke: pixel=1,
+        start_time: float=0, z_index: int=9999
+    ):
         self.window = window
         self.x0, self.y0 = get_values(start)
         self.x1, self.y1 = get_values(end)
@@ -20,7 +25,7 @@ class Line:
         self.color = get_color(color)
         self.start_time = start_time
 
-        window.elements.append(self)
+        window.add_element(self, z_index)
     
     def show(self) -> None:
         if Clock.time < self.start_time: return
@@ -29,7 +34,12 @@ class Line:
 
 
 class Lines:
-    def __init__(self, window: Window, points: list[coordinate], color: any='white', closed: bool=False, stroke: pixel=1, start_time: float=0):
+    def __init__(
+        self, window: Window,
+        points: list[coordinate], color: any='white',
+        closed: bool=False, stroke: pixel=1,
+        start_time: float=0, z_index: int=9999
+    ):
         self.window = window
         self.points = [get_values(point) for point in points]
         self.closed = closed
@@ -41,7 +51,7 @@ class Lines:
         self.should_update = any(map(f, self.points)) 
 
         self.update(update_values=True)
-        window.elements.append(self)
+        window.add_element(self, z_index)
     
     def update(self, update_values: bool=False) -> None:
         if not update_values:
@@ -54,7 +64,12 @@ class Lines:
 
 
 class Circle:
-    def __init__(self, window: Window, center: tuple[pixel, pixel], radius: pixel, color: any='white', stroke: pixel=1, start_time: float=0):
+    def __init__(
+        self, window: Window,
+        center: tuple[pixel, pixel], radius: pixel,
+        color: any='white', stroke: pixel=1,
+        start_time: float=0, z_index: int=9999
+    ):
         self.window = window
         self.x, self.y = get_values(center)
         self.radius = get_value(radius)
@@ -65,7 +80,7 @@ class Circle:
         self.start_time = start_time
 
         self.update(update_values=True)
-        window.elements.append(self)
+        window.add_element(self, z_index)
     
     def update(self, update_values: bool=False) -> None:
         if not update_values:
@@ -78,7 +93,12 @@ class Circle:
 
 
 class Ellipse:
-    def __init__(self, window: Window, center: tuple[pixel, pixel], rx: pixel, ry: pixel, color: any='white', stroke: pixel=1, start_time: float=0):
+    def __init__(
+        self, window: Window,
+        center: tuple[pixel, pixel], rx: pixel, ry: pixel,
+        color: any='white', stroke: pixel=1,
+        start_time: float=0, z_index: int=9999
+    ):
         self.window = window
         self.x, self.y = get_values(center)
         self.rx, self.ry = get_value(rx), get_value(ry)
@@ -89,7 +109,7 @@ class Ellipse:
         self.start_time = start_time
 
         self.update(update_values=True)
-        window.elements.append(self)
+        window.add_element(self, z_index)
     
     def update(self, update_values: bool=False) -> None:
         if not update_values:
@@ -103,7 +123,11 @@ class Ellipse:
 
 
 class Rectangle:
-    def __init__(self, window: Window, rectangle: rect, color: any='white', stroke: pixel=1, start_time: float=0):
+    def __init__(
+        self, window: Window,
+        rectangle: rect, color: any='white', stroke: pixel=1,
+        start_time: float=0, z_index: int=9999
+    ):
         self.window = window
         self.x, self.y, self.w, self.h = rectangle
         self.color = color
@@ -113,7 +137,7 @@ class Rectangle:
         self.start_time = start_time
 
         self.update(update_values=True)
-        window.elements.append(self)
+        window.add_element(self, z_index)
     
     def update(self, update_values: bool=False) -> None:
         if not update_values:
@@ -131,9 +155,13 @@ class Rectangle:
 
 
 class Polygon:
-    def __init__(self, window: Window, points: list[coordinate], color: any='white', stroke: pixel=1, start_time: float=0):
+    def __init__(
+        self, window: Window,
+        points: list[coordinate], color: any='white', stroke: pixel=1,
+        start_time: float=0, z_index: int=9999
+    ):
         self.window = window
-        self.points = points
+        self.points = [get_values(point) for point in points]
 
         self.color = get_color(color)
         self.stroke = get_value(stroke)
@@ -143,7 +171,7 @@ class Polygon:
         self.start_time = start_time
 
         self.update(update_values=True)
-        window.elements.append(self)
+        window.add_element(self, z_index)
     
     def update(self, update_values: bool=False) -> None:
         if not update_values:
@@ -156,13 +184,19 @@ class Polygon:
 
 
 class RegularPolygon(Polygon):
-    def __init__(self, window: Window, center: tuple[pixel, pixel], radius: pixel, sides: float, phase: float=0, color: any='white', stroke: pixel=1, start_time: float=0):
+    def __init__(
+        self, window: Window,
+        center: tuple[pixel, pixel], radius: pixel,
+        sides: float, phase: float=0,
+        color: any='white', stroke: pixel=1,
+        start_time: float=0, z_index: int=9999
+    ):
         self.x, self.y = get_values(center)
         self.radius = get_value(radius)
         self.sides = get_value(sides)
         self.phase = get_value(phase)
         self.should_update = type(self.sides) != Value or type(self.x) != Value or type(self.y) != Value or type(self.radius) != Value
-        super().__init__(window, [], color, stroke, start_time)
+        super().__init__(window, [], color, stroke, start_time, z_index)
 
     def update(self, update_values: bool=False) -> None:
         if not update_values:
@@ -184,7 +218,13 @@ class RegularPolygon(Polygon):
 
 
 class AnimatedLine:
-    def __init__(self, window: Window, start: coordinate, end: coordinate, color: any='white', stroke: pixel=1, transition_time: float=1, start_time: float=0):
+    def __init__(
+        self, window: Window,
+        start: coordinate, end: coordinate,
+        color: any='white', stroke: pixel=1,
+        transition_time: float=1, start_time: float=0,
+        z_index: int=9999
+    ):
         self.window = window
         self.x0, self.y0 = get_values(start)
         self.x1, self.y1 = get_values(end)
@@ -195,7 +235,7 @@ class AnimatedLine:
         self.color = get_color(color)
         self.start_time = start_time
 
-        window.elements.append(self)
+        window.add_element(self, z_index)
     
     def show(self) -> None:
         if Clock.time < self.start_time: return
@@ -204,7 +244,13 @@ class AnimatedLine:
 
 
 class AnimatedLines:
-    def __init__(self, window: Window, points: list[coordinate], color: any='white', closed: bool=False, stroke: pixel=1, transition_time: float=1, start_time: float=0):
+    def __init__(
+        self, window: Window,
+        points: list[coordinate], color: any='white',
+        closed: bool=False, stroke: pixel=1,
+        transition_time: float=1, start_time: float=0,
+        z_index: int=9999
+    ):
 
         accumulated_lengths = [0]
         if closed: points = list(points) + [points[0]]
@@ -220,7 +266,7 @@ class AnimatedLines:
         self.start_time = start_time
         self.transition_time = transition_time
 
-        window.elements.append(self)
+        window.add_element(self, z_index)
 
     def draw_line(self, index: int) -> None:
         time_t = (Clock.time - self.start_time) / self.transition_time - self.t_values[index]
@@ -279,24 +325,31 @@ class Letter:
         self.color = color
         self.start_time = start_time
 
+        self.should_update = True
         self.update(update_values=True)
     
     def update(self, update_values: bool=False) -> None:
-        if Clock.time < self.start_time and not update_values: return
+        if not self.should_update: return
+
+        if not update_values:
+            if Clock.time < self.start_time: return
+
         self.font = pygame.font.SysFont(self.font_name, self.font_size)
         self.text = self.font.render(self.font_text, True, self.color.rgb())
         self.rect = self.text.get_rect(topleft=(self.x.get(), self.y.get()))
     
     def show(self) -> None:
-        if Clock.time < self.start_time: return
         self.window.screen.blit(self.text, self.rect)
     
     def __setattr__(self, name: str, value: any) -> None:
         if name == 'color':
+            color = get_color(value)
             if not hasattr(self, 'color'):
-                return super().__setattr__(name, get_color(value))
+                return super().__setattr__(name, color)
             if type(self.color) == LerpColor:
-                return setattr(self.color, 'end', get_color(value))
+                return setattr(self.color, 'end', color)
+            return super().__setattr__(name, color)
+
         elif name in 'xy': return super().__setattr__(name, get_value(value))
         super().__setattr__(name, value)
 
@@ -307,7 +360,7 @@ class Text:
         text: str, x: float, y: float,
         size: int, color: any='white', font: str='cmuserifroman',
         anchor_x: str='left', anchor_y: str='top',
-        start_time: float=0
+        start_time: float=0, z_index: int=9999
     ):
         self.letters = []
         self.font_text = text
@@ -324,19 +377,23 @@ class Text:
         else: offset_x = 0
 
         if anchor_y == 'centery': offset_y = -self.height/2
-        elif anchor_y == 'bottom': offset_y = self.height
+        elif anchor_y == 'bottom': offset_y = -self.height
         else: offset_y = 0
+
+        self.rect = pygame.Rect(x + offset_x, y + offset_y, self.width, self.height)
 
         for letter in self.letters:
             letter.x += offset_x
             letter.y += offset_y
 
-        window.elements.append(self)
+        self.start_time = start_time
+        window.add_element(self, z_index)
 
     def update(self, update_values: bool=False) -> None:
         for letter in self.letters: letter.update()
     
     def show(self) -> None:
+        if Clock.time < self.start_time: return
         for letter in self.letters: letter.show()
     
     def __getitem__(self, index: int|slice|str) -> Letter:
@@ -357,11 +414,47 @@ class AnimatedText(Text):
         text: str, x: float, y: float,
         size: int, color: any='white', font: str='cmuserifroman',
         anchor_x: str='left', anchor_y: str='top',
-        transition_time: float=1, start_time: float=0
+        transition_time: float=1, start_time: float=0,
+        z_index: int=9999
     ):
-        super().__init__(window, text, x, y, size, color, font, anchor_x, anchor_y, start_time)
+        super().__init__(window, text, x, y, size, color, font, anchor_x, anchor_y, start_time, z_index)
 
         transition_time /= self.length
         for letter in self.letters:
             letter.color = LerpColor(window.color, letter.color, transition_time, start_time)
             start_time += transition_time
+        
+        self.transition_time = transition_time
+        self.should_update = True
+    
+    def update(self, should_update: bool=False) -> None:
+        if not self.should_update: return
+        super().update(should_update)
+
+        for i, letter in enumerate(self.letters):
+            if Clock.time >= letter.start_time + i * self.transition_time + 0.1:
+                letter.should_update = False
+            else: break
+        else: self.should_update = False
+
+
+class FastText:
+    def __init__(
+        self, window: Window,
+        text: str, x: float, y: float,
+        size: int, color: any='white', font: str='cmuserifroman',
+        anchor_x: str='left', anchor_y: str='top',
+        start_time: float=0, z_index: int=9999
+    ):
+        self.window = window
+        self.color = get_color(color)
+        self.font = pygame.font.SysFont(font, size)
+        self.text = self.font.render(text, True, self.color.rgb())
+        self.rect = self.text.get_rect(**{anchor_x: x, anchor_y: y})
+        self.start_time = start_time
+
+        window.add_element(self, z_index)
+    
+    def show(self) -> None:
+        if Clock.time < self.start_time: return
+        self.window.screen.blit(self.text, self.rect)

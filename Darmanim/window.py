@@ -64,6 +64,9 @@ class Window:
         else: self.video = None
         self.recording = False
 
+        self.frame = 1
+        self.font = pygame.font.SysFont('Arial', 32)
+
         pygame.display.set_caption(title)
         pygame.display.set_icon(pygame.image.load(icon).convert_alpha())
 
@@ -81,13 +84,19 @@ class Window:
         for element in self.elements:
             element.show()
 
+    def add_element(self, element: any, z_index: int) -> None:
+        element.z_index = z_index
+        self.elements.append(element)
+        self.elements = sorted(self.elements, key=lambda e: e.z_index, reverse=True)
+
     def update(self) -> None:
         Clock.tick()
         Object.update_all()
 
         for element in self.elements:
             if hasattr(element, 'update'):
-                element.update(True)
+                try: element.update(True)
+                except TypeError: element.update()
 
     def run(self) -> None:
         self.running = True
@@ -100,11 +109,16 @@ class Window:
             
             self.update()
             self.show()
-            pygame.display.update()
 
             if self.recording and self.output and Clock.time >= 0:
                 self.video.write()
                 self.running = not (self.record_time != 0 and Clock.time >= self.record_time + Clock.dt)
+
+                text = self.font.render(f'{self.frame}/{Clock.fps * self.record_time}', True, 'white')
+                self.screen.blit(text, (10, 10))
+                self.frame += 1
         
+            pygame.display.update()
+
         pygame.quit()
         if self.recording and self.video: self.video.release()

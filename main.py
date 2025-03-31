@@ -1,14 +1,20 @@
+import numpy as np
+from Darmanim.time import Clock
 from Darmanim.window import Window
-from Darmanim.color import LerpColor
-from Darmanim.draw import AnimatedText
+from Darmanim.graph import Graph, Function
+
+
+def animated_sine(x: np.array) -> np.array:
+    return np.sin(x + Clock.time)
 
 
 if __name__ == '__main__':
-    color = LerpColor('red', 'background', 0.5)
-    window = Window(size=(900, 900), color=color)
+    window = Window(size=(900, 900))
+    
+    graph = Graph(size=(800, 800))
+    window.add(graph)
 
-    darmanim = AnimatedText(window, 'Darmanim <3', 450, 450, 120, anchor_x='centerx', anchor_y='centery')
-    darmanim['<3'].color = 'red'
+    function = Function(animated_sine)
+    graph.add(function)
 
     window.run()
-
