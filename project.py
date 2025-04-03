@@ -1,7 +1,7 @@
 import random
 from Darmanim.window import Window
 from Darmanim.values import LerpValue
-from Darmanim.color import LerpColor, get_color
+from Darmanim.color import LerpColor
 from Darmanim.draw import AnimatedLines, Circle, AnimatedText, FastText, Polygon, Lines, Rectangle
 
 
@@ -23,7 +23,6 @@ if __name__ == '__main__':
     tx, ty = 100, 50
     i = 1
 
-    # start_time = 0
     for y in range(contour_y, 900+contour_y, 100):
         for x in range(contour_x, 900+contour_x, 100):
 
@@ -114,9 +113,4 @@ if __name__ == '__main__':
     h = LerpValue(0, 1000, 0.1, start_time=start_time)
     Rectangle(window, (100, 50, 800, h), window.color, 0)
 
-    print(start_time)
-
-    window.record()
-
     window.run()
-
