@@ -20,7 +20,110 @@ class Object:
     def update_all() -> None:
         for element in Object.elements:
             element.update_time()
-            if element.update(): Object.elements.remove(element)
+            if element.update():
+                Object.elements.remove(element)
+
+
+class Event(Object):
+    def __init__(self, element: any, attribute: str, value: any, start_time: float=0, transition_time: float=0, update_element: bool=False):
+        super().__init__(start_time)
+        self.element = element
+        self.attribute = attribute
+        self.value = get_value(value)
+        self.transition_time = transition_time
+        self.update_element = update_element
+        Object.add(self)
+
+    def update(self) -> bool:
+        if Clock.time < self.start_time: return False
+
+        setattr(self.element, self.attribute, self.value.get())
+        if self.update_element: self.element.update()
+
+        if self.transition_time == 0: return True
+
+        return False
+    
+
+class LerpEvent(Object):
+    def __init__(self, element: any, attribute: str, start: any, end: any, transition_time: float, start_time: float=0, update_element: bool=False):
+        super().__init__(start_time)
+        self.element = element
+        self.attribute = attribute
+        self.start = get_value(start)
+        self.end = get_value(end)
+        self.transition_time = transition_time
+        self.update_element = update_element
+        Object.add(self)
+
+    def update(self) -> bool:
+        if Clock.time < self.start_time: return False
+        if self.time >= self.transition_time:
+            setattr(self.element, self.attribute, self.end.get())
+            return True
+
+        t = self.time / self.transition_time
+        value = self.start + (self.end - self.start) * t
+        setattr(self.element, self.attribute, value)
+        if self.update_element: self.element.update()
+
+        return False
+
+
+class LerpEventGroup(Object):
+    def __init__(self, elements: tuple[any], attributes: tuple[str], starts: tuple[any], ends: tuple[any], transition_time: float, start_time: float=0, update_elements: bool=False):
+        super().__init__(start_time)
+        self.elements = elements
+        self.attributes = attributes
+        self.starts = get_values(starts)
+        self.ends = get_values(ends)
+        self.transition_time = transition_time
+        self.update_elements = update_elements
+        Object.add(self)
+
+    def update(self) -> bool:
+        if Clock.time < self.start_time: return False
+        if self.time >= self.transition_time:
+            for element, attribute, end in zip(self.elements, self.attributes, self.ends):
+                setattr(element, attribute, end.get())
+            return True
+
+        t = self.time / self.transition_time
+        for element, attribute, start, end in zip(self.elements, self.attributes, self.starts, self.ends):
+            value = start + (end - start) * t
+            setattr(element, attribute, value)
+            if self.update_elements: element.update()
+
+        return False
+
+
+class Action(Object):
+    def __init__(self, action: callable, start_time: float, args: tuple[any]=(), kwargs: dict[str, any]={}):
+        super().__init__(start_time)
+
+        self.action = action
+        self.args = args
+        self.kwargs = kwargs
+    
+    def update(self) -> bool:
+        if Clock.time < self.start_time: return False
+        self.action(*self.args, **self.kwargs)
+        return True
+
+
+class ActionEvent(Object):
+    def __init__(self, action: callable, start_time: float, transition_time: float, args: tuple[any]=(), kwargs: dict[str, any]={}):
+        super().__init__(start_time)
+
+        self.action = action
+        self.args = args
+        self.kwargs = kwargs
+        self.transition_time = transition_time
+    
+    def update(self) -> bool:
+        if Clock.time < self.start_time: return False
+        self.action(*self.args, **self.kwargs)
+        return self.time >= self.transition_time
 
 
 def get_value(value: any) -> Value:
@@ -136,8 +239,8 @@ class SequenceValue(Object, Value):
 
 
 class ContinuosValue(Object, Value):
-    def __init__(self, start: float, step: float, transition_time: float, function: callable=None):
-        Object.__init__(self)
+    def __init__(self, start: float, step: float, transition_time: float, start_time: float=0, function: callable=None):
+        Object.__init__(self, start_time)
         Value.__init__(self, start)
 
         self.t = 0

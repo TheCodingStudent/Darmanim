@@ -6,7 +6,7 @@ import pygame.gfxdraw
 from Darmanim.time import Clock
 from Darmanim.window import Window
 from Darmanim.color import get_color
-from Darmanim.values import get_value, LerpValue
+from Darmanim.values import get_value, LerpValue, Event, Action, LerpEvent, ActionEvent, LerpEventGroup
 
 type unit = float
 type pixel = float
@@ -253,11 +253,62 @@ class Graph:
         self.border = get_color(border)
         self.border_width = border_width
 
-        self.dx = self.dy = None
-        self.call_update = False
-
         self.elements = []
     
+    def displace_to(self, x: pixel, y: pixel, start_time: float=0, transition_time: float=0) -> Graph:
+        """Esta es la documentacion, bebita"""
+        if start_time != 0:
+            Action(self.displace_to, start_time, args=(x, y, 0, transition_time))
+            return self
+        
+        if transition_time == 0:
+            Event(self, 'x', x, start_time)
+            Event(self, 'y', y, start_time)
+        else:
+            LerpEvent(self, 'x', self.x, x, transition_time, start_time)
+            LerpEvent(self, 'y', self.y, y, transition_time, start_time)
+        
+        return self
+
+    def move_to(self, x: unit, y: unit, start_time: float=0, transition_time: float=0) -> Graph:
+        if start_time != 0:
+            Action(self.move_to, start_time, args=(x, y, 0, transition_time))
+            return self
+        
+        if transition_time == 0:
+            self.grid.center_at(x, y)
+        else:
+            def move_grid(x: LerpValue, y: LerpValue) -> None:
+                self.grid.center_at(x.get(), -y.get())
+
+            x = LerpValue(self.grid.center[0], x, transition_time)
+            y = LerpValue(self.grid.center[1], y, transition_time)
+            ActionEvent(move_grid, 0, transition_time, args=(x, y))
+        
+        return self
+    
+    def reshape(self, width: pixel, height: pixel, start_time: float=0, transition_time: float=0) -> Graph:
+        if start_time != 0:
+            Action(self.reshape, start_time, args=(width, height, 0, transition_time))
+            return self
+        
+        if transition_time == 0:
+            Event(self, 'width', width, start_time, update_element=True)
+            Event(self, 'height', height, start_time, update_element=True)
+        else:
+            dx = (self.width - width) / 2 
+            dy = (self.height - height) / 2 
+            LerpEventGroup(
+                (self, self, self, self),
+                ('width', 'height', 'x', 'y'),
+                (self.width, self.height, self.x, self.y),
+                (width, height, self.x+dx, self.y+dy),
+                transition_time, update_elements=True, update_function=self.reshape_update
+            )
+
+    def reshape_update(self) -> None:
+        self.surface = pygame.Surface((self.width, self.height))
+
     def attach(self, window: Window, x: pixel|None=None, y: pixel|None=None) -> None:
         self.window = window
         self.screen = window.screen
@@ -270,24 +321,6 @@ class Graph:
     def draw_border(self) -> None:
         if (self.border is None) or (self.border_width == 0): return
         pygame.draw.rect(self.surface, self.border.rgb(), (0, 0, self.width, self.height), width=self.border_width)
-
-    def update(self) -> None:
-        if not self.call_update: return
-        for element in self.elements:
-            if isinstance(element, Function): element.update(True)
-
-        if self.dx is None and self.dy is None: return
-        self.grid.center_at(self.dx.get(), self.dy.get())
-
-    def center_at(self, x: unit, y: unit, transition_time: float=0, start_time: float=0) -> None:
-        self.call_update = True
-        y = -y
-        if transition_time == 0: self.dx, self.dy = get_value(x), get_value(y)
-        else:
-            if self.dx is None: self.dx = 0
-            if self.dy is None: self.dy = 0
-            self.dx = LerpValue(self.dx, x, transition_time, start_time)
-            self.dy = LerpValue(self.dy, y, transition_time, start_time)
 
     def show(self) -> None:
         self.surface.fill(self.color.rgb())

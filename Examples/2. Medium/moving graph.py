@@ -1,23 +1,25 @@
-from Darmanim.graph import Graph
+import numpy as np
 from Darmanim.window import Window
-from Darmanim.polygons import Polygon
+from Darmanim.graph import Graph, Function
+from Darmanim.animations import phase
+
+
+@phase(0, 2*np.pi, 8, 1)
+def animated_sine(x: np.array) -> np.array:
+    return np.sin(x)
 
 
 if __name__ == '__main__':
-    window = Window(size=(900, 900), record_time=6, output='moving graph.mp4')
+    window = Window(size=(1600, 900), output='graph movements.mp4', record_time=6)
 
     graph = Graph(size=(800, 800))
-
-    points = [(0, 5), (5, 0), (0, -5), (-5, 0)]
-    graph.add(Polygon(points))
-
-    graph.center_at(*points[0], 1, 1)
-    graph.center_at(*points[1], 1, 2)
-    graph.center_at(*points[2], 1, 3)
-    graph.center_at(*points[3], 1, 4)
-    graph.center_at(0, 0, 1, 5)
-
     window.add(graph)
 
-    window.record()
+    graph.add(Function(animated_sine, color='babypink'))
+
+    graph.displace_to(50, graph.y, start_time=1, transition_time=1)
+    graph.move_to(5, 0, start_time=3, transition_time=1)
+    graph.reshape(1500, 800, start_time=5, transition_time=1)
+    graph.displace_to(50, graph.y, start_time=5, transition_time=1)
+
     window.run()

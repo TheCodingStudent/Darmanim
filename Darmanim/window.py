@@ -12,7 +12,6 @@ class VideoMP4:
         self.surface = surface
         self.width, self.height = self.surface.get_size()
         self.frame_count = 0
-
         self.folder = os.path.join(os.path.dirname(__file__), 'frames')
 
     def write(self) -> None:
@@ -53,15 +52,16 @@ class Window:
         if size == (0, 0) and flags == 0: flags = pygame.FULLSCREEN
         self.screen = pygame.display.set_mode(size, flags)
         self.color = get_color(color)
+
         self.elements = []
         self.functions = []
+        self.events = []
 
         self.width, self.height = self.screen.get_size()
 
         self.output = output
         self.record_time = record_time
-        if output != '': self.video = VideoMP4(output, self.screen)
-        else: self.video = None
+        self.video = VideoMP4(output, self.screen) if output else None
         self.recording = False
 
         self.frame = 1
@@ -73,7 +73,7 @@ class Window:
     def record(self) -> None:
         self.recording = True
 
-    def add(self, element: any, x: int|None=None, y: int|None=None) -> None:
+    def add(self, element: any, x: int|None=None, y: int|None=None, start_time: float=0) -> None:
         self.elements.append(element)
         if hasattr(element, 'attach'):
             try: element.attach(self, x, y)
@@ -92,6 +92,9 @@ class Window:
     def update(self) -> None:
         Clock.tick()
         Object.update_all()
+
+        for event in self.events:
+            event.update()
 
         for element in self.elements:
             if hasattr(element, 'update'):
