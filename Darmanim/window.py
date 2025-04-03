@@ -55,7 +55,6 @@ class Window:
 
         self.elements = []
         self.functions = []
-        self.events = []
 
         self.width, self.height = self.screen.get_size()
 
@@ -92,9 +91,6 @@ class Window:
     def update(self) -> None:
         Clock.tick()
         Object.update_all()
-
-        for event in self.events:
-            event.update()
 
         for element in self.elements:
             if hasattr(element, 'update'):

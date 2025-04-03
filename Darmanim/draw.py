@@ -183,6 +183,115 @@ class Polygon:
         pygame.draw.polygon(self.window.screen, self.color.rgb(), self.coordinates, self.stroke.get(int))
 
 
+class Arc:
+    def __init__(self, window: Window, start: coordinate, end: coordinate, radius: pixel, color: any='white', stroke: pixel=1, flip_orientation: bool=False, flip_direction: bool=False, z_index: int=9999):
+        self.window = window
+        self.start = get_values(start)
+        self.end = get_values(end)
+        self.radius = get_value(radius)
+        self.color = get_color(color)
+        self.stroke = get_value(stroke)
+
+        self.flip_orientation = flip_orientation
+        self.flip_direction = flip_direction
+
+        self.should_update = True
+        self.update()
+
+        window.add_element(self, z_index)
+    
+    def update(self) -> None:
+        if not self.should_update: return
+
+        a = self.start[0].get(), self.start[1].get()
+        b = self.end[0].get(), self.end[1].get()
+        r = self.radius.get()
+
+        m = (a[0] + b[0]) / 2, (a[1] + b[1]) / 2
+        t = b[0] - a[0], b[1] - a[1]
+        n = b[1] - a[1], a[0] - b[0]
+        dn = math.hypot(*n)
+        d = math.hypot(*t)
+
+        h = math.sqrt(r*r - d*d/4)
+
+        if not self.flip_orientation: o = m[0] - h*n[0]/dn, m[1] - h*n[1]/dn
+        else: o = m[0] + h*n[0]/dn, m[1] + h*n[1]/dn 
+
+        av = a[0] - o[0], a[1] - o[1]
+        bv = b[0] - o[0], b[1] - o[1]
+
+        if not self.flip_direction: av, bv = bv, av
+
+        self.rect = (o[0] - r, o[1] - r, 2*r, 2*r)
+        self.start_angle = math.atan2(-av[1], av[0])
+        self.end_angle = math.atan2(-bv[1], bv[0])
+    
+    def show(self) -> None:
+        pygame.draw.arc(self.window.screen, self.color.rgb(), self.rect, self.start_angle, self.end_angle, width=self.stroke.get(int))
+
+
+
+class AnimatedArc:
+    def __init__(
+        self, window: Window,
+        start: coordinate, end: coordinate, radius: pixel,
+        color: any='white', stroke: pixel=1,
+        transition_time: float=1, start_time: float=0,
+        flip_orientation: bool=False, flip_direction: bool=False,
+        flip_drawing: bool=False, z_index: int=9999
+    ):
+        self.window = window
+        self.start = get_values(start)
+        self.end = get_values(end)
+        self.radius = get_value(radius)
+        self.color = get_color(color)
+        self.stroke = get_value(stroke)
+
+        self.t = LerpValue(0, 1, transition_time, start_time)
+
+        self.flip_orientation = flip_orientation
+        self.flip_direction = flip_direction
+
+        self.should_update = True
+        # self.transition_time = transition_time
+
+        window.add_element(self, z_index)
+    
+    def update(self) -> None:
+        if not self.should_update: return
+
+        a = self.start[0].get(), self.start[1].get()
+        b = self.end[0].get(), self.end[1].get()
+        r = self.radius.get()
+
+        m = (a[0] + b[0]) / 2, (a[1] + b[1]) / 2
+        t = b[0] - a[0], b[1] - a[1]
+        n = b[1] - a[1], a[0] - b[0]
+        dn = math.hypot(*n)
+        d = math.hypot(*t)
+
+        h = math.sqrt(r*r - d*d/4)
+
+        if not self.flip_orientation: o = m[0] - h*n[0]/dn, m[1] - h*n[1]/dn
+        else: o = m[0] + h*n[0]/dn, m[1] + h*n[1]/dn 
+
+        av = a[0] - o[0], a[1] - o[1]
+        bv = b[0] - o[0], b[1] - o[1]
+
+        if not self.flip_direction: av, bv = bv, av
+
+        self.rect = (o[0] - r, o[1] - r, 2*r, 2*r)
+        self.start_angle = math.atan2(-av[1], av[0])
+        self.end_angle = math.atan2(-bv[1], bv[0])
+
+        self.end_angle = self.start_angle + (self.end_angle - self.start_angle) * self.t.get()
+    
+    def show(self) -> None:
+        self.update()
+        pygame.draw.arc(self.window.screen, self.color.rgb(), self.rect, self.start_angle, self.end_angle, width=self.stroke.get(int))
+
+
 class RegularPolygon(Polygon):
     def __init__(
         self, window: Window,
