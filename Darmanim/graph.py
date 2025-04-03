@@ -308,6 +308,7 @@ class Graph:
 
     def reshape_update(self) -> None:
         self.surface = pygame.Surface((self.width, self.height))
+        self.grid.update()
 
     def attach(self, window: Window, x: pixel|None=None, y: pixel|None=None) -> None:
         self.window = window

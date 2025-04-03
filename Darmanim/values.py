@@ -71,7 +71,7 @@ class LerpEvent(Object):
 
 
 class LerpEventGroup(Object):
-    def __init__(self, elements: tuple[any], attributes: tuple[str], starts: tuple[any], ends: tuple[any], transition_time: float, start_time: float=0, update_elements: bool=False):
+    def __init__(self, elements: tuple[any], attributes: tuple[str], starts: tuple[any], ends: tuple[any], transition_time: float, start_time: float=0, update_elements: bool=False, update_function: callable|None=None):
         super().__init__(start_time)
         self.elements = elements
         self.attributes = attributes
@@ -79,6 +79,7 @@ class LerpEventGroup(Object):
         self.ends = get_values(ends)
         self.transition_time = transition_time
         self.update_elements = update_elements
+        self.update_function = update_function
         Object.add(self)
 
     def update(self) -> bool:
@@ -86,13 +87,18 @@ class LerpEventGroup(Object):
         if self.time >= self.transition_time:
             for element, attribute, end in zip(self.elements, self.attributes, self.ends):
                 setattr(element, attribute, end.get())
+                if self.update_elements:
+                    if self.update_function: self.update_function()
+                    else: element.update()
+
             return True
 
         t = self.time / self.transition_time
         for element, attribute, start, end in zip(self.elements, self.attributes, self.starts, self.ends):
             value = start + (end - start) * t
             setattr(element, attribute, value)
-            if self.update_elements: element.update()
+            if self.update_function: self.update_function()
+            else: element.update()
 
         return False
 
