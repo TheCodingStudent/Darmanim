@@ -2,8 +2,8 @@ import os
 import pygame
 import subprocess
 from Darmanim.time import Clock
-from Darmanim.values import Object
 from Darmanim.color import get_color
+from Darmanim.values import Object, Action
 
 
 class VideoMP4:
@@ -54,7 +54,7 @@ class Window:
         self.color = get_color(color)
 
         self.elements = []
-        self.functions = []
+        self.hidden = []
 
         self.width, self.height = self.screen.get_size()
 
@@ -72,7 +72,33 @@ class Window:
     def record(self) -> None:
         self.recording = True
 
+    def hide(self, element: any, start_time: float, keep_updating: bool=False) -> None:
+        if start_time == 0:
+            self.elements.remove(element)
+            self.hidden.append((element, keep_updating))
+            return
+        
+        Action(self.hide, start_time, args=(element, 0))
+    
+    def unhide(self, element: any, start_time: float) -> None:
+        if start_time == 0:
+            self.elements.append(element)
+            for hidden, update in self.hidden:
+                if hidden == element: self.hidden.remove((element, update))
+            return
+    
+        Action(self.unhide, start_time, args=(element, 0))
+
+    def remove(self, element: any, start_time: float) -> None:
+        if start_time == 0:
+            return self.elements.remove(element)
+        Action(self.remove, start_time, args=(element, 0))
+
     def add(self, element: any, x: int|None=None, y: int|None=None, start_time: float=0) -> None:
+        if start_time != 0:
+            Action(self.add, start_time, args=(element, x, y))
+            return element
+
         self.elements.append(element)
         if hasattr(element, 'attach'):
             try: element.attach(self, x, y)
@@ -93,6 +119,12 @@ class Window:
         Object.update_all()
 
         for element in self.elements:
+            if hasattr(element, 'update'):
+                try: element.update(True)
+                except TypeError: element.update()
+        
+        for element, update in self.hidden:
+            if not update: continue
             if hasattr(element, 'update'):
                 try: element.update(True)
                 except TypeError: element.update()

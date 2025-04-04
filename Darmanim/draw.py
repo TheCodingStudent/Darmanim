@@ -239,7 +239,7 @@ class AnimatedArc:
         color: any='white', stroke: pixel=1,
         transition_time: float=1, start_time: float=0,
         flip_orientation: bool=False, flip_direction: bool=False,
-        flip_drawing: bool=False, z_index: int=9999
+        z_index: int=9999
     ):
         self.window = window
         self.start = get_values(start)
@@ -254,7 +254,6 @@ class AnimatedArc:
         self.flip_direction = flip_direction
 
         self.should_update = True
-        # self.transition_time = transition_time
 
         window.add_element(self, z_index)
     
