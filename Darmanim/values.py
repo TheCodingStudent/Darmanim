@@ -97,8 +97,9 @@ class LerpEventGroup(Object):
         for element, attribute, start, end in zip(self.elements, self.attributes, self.starts, self.ends):
             value = start + (end - start) * t
             setattr(element, attribute, value)
-            if self.update_function: self.update_function()
-            else: element.update()
+            if self.update_elements:
+                if self.update_function: self.update_function()
+                else: element.update()
 
         return False
 
@@ -179,8 +180,20 @@ class Value:
     def __rtruediv__(self, other: any) -> any:
         return other / self.value
     
-    def __eq__(self, other: any) -> any:
+    def __eq__(self, other: any) -> bool:
         return self.value == other
+    
+    def __gt__(self, other: any) -> bool:
+        return self.value > other
+
+    def __ge__(self, other: any) -> bool:
+        return self.value >= other
+    
+    def __lt__(self, other: any) -> bool:
+        return self.value < other
+    
+    def __le__(self, other: any) -> bool:
+        return self.value <= other
 
     def __index__(self) -> int:
         return int(self.value)

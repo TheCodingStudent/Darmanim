@@ -2,7 +2,7 @@ import math
 import pygame
 import numpy as np
 from Darmanim.time import Clock
-from Darmanim.window import Window
+from Darmanim.window import Surface
 from Darmanim.color import get_color, LerpColor
 from Darmanim.values import get_value, get_values, Value, LerpValue
 
@@ -13,34 +13,34 @@ type coordinate = tuple[pixel, pixel]
 
 class Line:
     def __init__(
-        self, window: Window,
+        self, surface: Surface,
         start: coordinate, end: coordinate,
         color: any='white', stroke: pixel=1,
         start_time: float=0, z_index: int=9999
     ):
-        self.window = window
+        self.surface = surface
         self.x0, self.y0 = get_values(start)
         self.x1, self.y1 = get_values(end)
         self.stroke = get_value(stroke)
         self.color = get_color(color)
         self.start_time = start_time
 
-        window.add_element(self, z_index)
+        surface.add_element(self, z_index)
     
     def show(self) -> None:
         if Clock.time < self.start_time: return
         start, end = (self.x0.get(), self.y0.get()), (self.x1.get(), self.y1.get())
-        pygame.draw.line(self.window.screen, self.color.rgb(), start, end, self.stroke.get(int))
+        pygame.draw.line(self.surface.screen, self.color.rgb(), start, end, self.stroke.get(int))
 
 
 class Lines:
     def __init__(
-        self, window: Window,
+        self, surface: Surface,
         points: list[coordinate], color: any='white',
         closed: bool=False, stroke: pixel=1,
         start_time: float=0, z_index: int=9999
     ):
-        self.window = window
+        self.surface = surface
         self.points = [get_values(point) for point in points]
         self.closed = closed
         self.color = get_color(color)
@@ -51,7 +51,7 @@ class Lines:
         self.should_update = any(map(f, self.points)) 
 
         self.update(update_values=True)
-        window.add_element(self, z_index)
+        surface.add_element(self, z_index)
     
     def update(self, update_values: bool=False) -> None:
         if not update_values:
@@ -60,17 +60,17 @@ class Lines:
     
     def show(self) -> None:
         if Clock.time < self.start_time: return
-        pygame.draw.lines(self.window.screen, self.color.rgb(), self.closed, self.coordinates, self.stroke.get(int))
+        pygame.draw.lines(self.surface.screen, self.color.rgb(), self.closed, self.coordinates, self.stroke.get(int))
 
 
 class Circle:
     def __init__(
-        self, window: Window,
+        self, surface: Surface,
         center: tuple[pixel, pixel], radius: pixel,
         color: any='white', stroke: pixel=1,
         start_time: float=0, z_index: int=9999
     ):
-        self.window = window
+        self.surface = surface
         self.x, self.y = get_values(center)
         self.radius = get_value(radius)
         self.color = get_color(color)
@@ -80,7 +80,7 @@ class Circle:
         self.start_time = start_time
 
         self.update(update_values=True)
-        window.add_element(self, z_index)
+        surface.add_element(self, z_index)
     
     def update(self, update_values: bool=False) -> None:
         if not update_values:
@@ -89,17 +89,17 @@ class Circle:
     
     def show(self) -> None:
         if Clock.time < self.start_time: return
-        pygame.draw.circle(self.window.screen, self.color.rgb(), self.center, self.radius.get(), self.stroke.get(int))
+        pygame.draw.circle(self.surface.screen, self.color.rgb(), self.center, self.radius.get(), self.stroke.get(int))
 
 
 class Ellipse:
     def __init__(
-        self, window: Window,
+        self, surface: Surface,
         center: tuple[pixel, pixel], rx: pixel, ry: pixel,
         color: any='white', stroke: pixel=1,
         start_time: float=0, z_index: int=9999
     ):
-        self.window = window
+        self.surface = surface
         self.x, self.y = get_values(center)
         self.rx, self.ry = get_value(rx), get_value(ry)
         self.color = get_color(color)
@@ -109,7 +109,7 @@ class Ellipse:
         self.start_time = start_time
 
         self.update(update_values=True)
-        window.add_element(self, z_index)
+        surface.add_element(self, z_index)
     
     def update(self, update_values: bool=False) -> None:
         if not update_values:
@@ -119,16 +119,16 @@ class Ellipse:
     
     def show(self) -> None:
         if Clock.time < self.start_time: return
-        pygame.draw.ellipse(self.window.screen, self.color.rgb(), self.rect, self.stroke.get(int))
+        pygame.draw.ellipse(self.surface.screen, self.color.rgb(), self.rect, self.stroke.get(int))
 
 
 class Rectangle:
     def __init__(
-        self, window: Window,
+        self, surface: Surface,
         rectangle: rect, color: any='white', stroke: pixel=1,
         start_time: float=0, z_index: int=9999
     ):
-        self.window = window
+        self.surface = surface
         self.x, self.y, self.w, self.h = rectangle
         self.color = color
         self.stroke = stroke
@@ -137,7 +137,7 @@ class Rectangle:
         self.start_time = start_time
 
         self.update(update_values=True)
-        window.add_element(self, z_index)
+        surface.add_element(self, z_index)
     
     def update(self, update_values: bool=False) -> None:
         if not update_values:
@@ -146,7 +146,7 @@ class Rectangle:
     
     def show(self) -> None:
         if Clock.time < self.start_time: return
-        pygame.draw.rect(self.window.screen, self.color.rgb(), self.rect, self.stroke.get(int))
+        pygame.draw.rect(self.surface.screen, self.color.rgb(), self.rect, self.stroke.get(int))
 
     def __setattr__(self, name: str, value: any):
         if name in ('x', 'y', 'w', 'h', 'stroke'): return super().__setattr__(name, get_value(value))
@@ -156,11 +156,11 @@ class Rectangle:
 
 class Polygon:
     def __init__(
-        self, window: Window,
+        self, surface: Surface,
         points: list[coordinate], color: any='white', stroke: pixel=1,
         start_time: float=0, z_index: int=9999
     ):
-        self.window = window
+        self.surface = surface
         self.points = [get_values(point) for point in points]
 
         self.color = get_color(color)
@@ -171,7 +171,7 @@ class Polygon:
         self.start_time = start_time
 
         self.update(update_values=True)
-        window.add_element(self, z_index)
+        surface.add_element(self, z_index)
     
     def update(self, update_values: bool=False) -> None:
         if not update_values:
@@ -180,12 +180,12 @@ class Polygon:
     
     def show(self) -> None:
         if Clock.time < self.start_time: return
-        pygame.draw.polygon(self.window.screen, self.color.rgb(), self.coordinates, self.stroke.get(int))
+        pygame.draw.polygon(self.surface.screen, self.color.rgb(), self.coordinates, self.stroke.get(int))
 
 
 class Arc:
-    def __init__(self, window: Window, start: coordinate, end: coordinate, radius: pixel, color: any='white', stroke: pixel=1, flip_orientation: bool=False, flip_direction: bool=False, z_index: int=9999):
-        self.window = window
+    def __init__(self, surface: Surface, start: coordinate, end: coordinate, radius: pixel, color: any='white', stroke: pixel=1, flip_orientation: bool=False, flip_direction: bool=False, z_index: int=9999):
+        self.surface = surface
         self.start = get_values(start)
         self.end = get_values(end)
         self.radius = get_value(radius)
@@ -198,7 +198,7 @@ class Arc:
         self.should_update = True
         self.update()
 
-        window.add_element(self, z_index)
+        surface.add_element(self, z_index)
     
     def update(self) -> None:
         if not self.should_update: return
@@ -228,20 +228,20 @@ class Arc:
         self.end_angle = math.atan2(-bv[1], bv[0])
     
     def show(self) -> None:
-        pygame.draw.arc(self.window.screen, self.color.rgb(), self.rect, self.start_angle, self.end_angle, width=self.stroke.get(int))
+        pygame.draw.arc(self.surface.screen, self.color.rgb(), self.rect, self.start_angle, self.end_angle, width=self.stroke.get(int))
 
 
 
 class AnimatedArc:
     def __init__(
-        self, window: Window,
+        self, surface: Surface,
         start: coordinate, end: coordinate, radius: pixel,
         color: any='white', stroke: pixel=1,
         transition_time: float=1, start_time: float=0,
         flip_orientation: bool=False, flip_direction: bool=False,
         z_index: int=9999
     ):
-        self.window = window
+        self.surface = surface
         self.start = get_values(start)
         self.end = get_values(end)
         self.radius = get_value(radius)
@@ -255,7 +255,7 @@ class AnimatedArc:
 
         self.should_update = True
 
-        window.add_element(self, z_index)
+        surface.add_element(self, z_index)
     
     def update(self) -> None:
         if not self.should_update: return
@@ -288,12 +288,12 @@ class AnimatedArc:
     
     def show(self) -> None:
         self.update()
-        pygame.draw.arc(self.window.screen, self.color.rgb(), self.rect, self.start_angle, self.end_angle, width=self.stroke.get(int))
+        pygame.draw.arc(self.surface.screen, self.color.rgb(), self.rect, self.start_angle, self.end_angle, width=self.stroke.get(int))
 
 
 class RegularPolygon(Polygon):
     def __init__(
-        self, window: Window,
+        self, surface: Surface,
         center: tuple[pixel, pixel], radius: pixel,
         sides: float, phase: float=0,
         color: any='white', stroke: pixel=1,
@@ -304,7 +304,7 @@ class RegularPolygon(Polygon):
         self.sides = get_value(sides)
         self.phase = get_value(phase)
         self.should_update = type(self.sides) != Value or type(self.x) != Value or type(self.y) != Value or type(self.radius) != Value
-        super().__init__(window, [], color, stroke, start_time, z_index)
+        super().__init__(surface, [], color, stroke, start_time, z_index)
 
     def update(self, update_values: bool=False) -> None:
         if not update_values:
@@ -327,13 +327,13 @@ class RegularPolygon(Polygon):
 
 class AnimatedLine:
     def __init__(
-        self, window: Window,
+        self, surface: Surface,
         start: coordinate, end: coordinate,
         color: any='white', stroke: pixel=1,
         transition_time: float=1, start_time: float=0,
         z_index: int=9999
     ):
-        self.window = window
+        self.surface = surface
         self.x0, self.y0 = get_values(start)
         self.x1, self.y1 = get_values(end)
         self.x = LerpValue(self.x0, self.x1, transition_time, start_time)
@@ -343,17 +343,17 @@ class AnimatedLine:
         self.color = get_color(color)
         self.start_time = start_time
 
-        window.add_element(self, z_index)
+        surface.add_element(self, z_index)
     
     def show(self) -> None:
         if Clock.time < self.start_time: return
         start, end = (self.x0.get(), self.y0.get()), (self.x.get(), self.y.get())
-        pygame.draw.line(self.window.screen, self.color.rgb(), start, end, self.stroke.get(int))
+        pygame.draw.line(self.surface.screen, self.color.rgb(), start, end, self.stroke.get(int))
 
 
 class AnimatedLines:
     def __init__(
-        self, window: Window,
+        self, surface: Surface,
         points: list[coordinate], color: any='white',
         closed: bool=False, stroke: pixel=1,
         transition_time: float=1, start_time: float=0,
@@ -367,14 +367,14 @@ class AnimatedLines:
         
         self.t_values = [length/accumulated_lengths[-1] for length in accumulated_lengths]
 
-        self.window = window
+        self.surface = surface
         self.points = points
         self.color = get_color(color)
         self.stroke = get_value(stroke)
         self.start_time = start_time
         self.transition_time = transition_time
 
-        window.add_element(self, z_index)
+        surface.add_element(self, z_index)
 
     def draw_line(self, index: int) -> None:
         time_t = (Clock.time - self.start_time) / self.transition_time - self.t_values[index]
@@ -385,10 +385,10 @@ class AnimatedLines:
         (x0, y0), (x1, y1) = self.points[index], self.points[index + 1]
 
         if t >= 1:
-            return pygame.draw.line(self.window.screen, self.color.rgb(), (x0, y0), (x1, y1), self.stroke.get(int))
+            return pygame.draw.line(self.surface.screen, self.color.rgb(), (x0, y0), (x1, y1), self.stroke.get(int))
         
         x, y = x0 + (x1 - x0) * t, y0 + (y1 - y0) * t
-        pygame.draw.line(self.window.screen, self.color.rgb(), (x0, y0), (x, y), self.stroke.get(int))
+        pygame.draw.line(self.surface.screen, self.color.rgb(), (x0, y0), (x, y), self.stroke.get(int))
 
     def show(self) -> None:
         if Clock.time < self.start_time: return
@@ -419,12 +419,12 @@ class Group:
 
 class Letter:
     def __init__(
-        self, window: Window,
+        self, surface: Surface,
         text: str, x: float, y: float,
         size: int, color: any='white', font: str='cmuserifroman',
         start_time: float=0
     ):
-        self.window = window
+        self.surface = surface
         self.font_text = text
         self.font_name = font
         self.font_size = size
@@ -447,7 +447,7 @@ class Letter:
         self.rect = self.text.get_rect(topleft=(self.x.get(), self.y.get()))
     
     def show(self) -> None:
-        self.window.screen.blit(self.text, self.rect)
+        self.surface.screen.blit(self.text, self.rect)
     
     def __setattr__(self, name: str, value: any) -> None:
         if name == 'color':
@@ -464,7 +464,7 @@ class Letter:
 
 class Text:
     def __init__(
-        self, window: Window,
+        self, surface: Surface,
         text: str, x: float, y: float,
         size: int, color: any='white', font: str='cmuserifroman',
         anchor_x: str='left', anchor_y: str='top',
@@ -474,7 +474,7 @@ class Text:
         self.font_text = text
         self.start_x, self.start_y = x, y
         for letter in text:
-            self.letters.append(Letter(window, letter, x, y, size, color, font, start_time))
+            self.letters.append(Letter(surface, letter, x, y, size, color, font, start_time))
             x += self.letters[-1].rect.width
 
         self.length = len(self.letters)
@@ -495,7 +495,7 @@ class Text:
             letter.y += offset_y
 
         self.start_time = start_time
-        window.add_element(self, z_index)
+        surface.add_element(self, z_index)
 
     def update(self, update_values: bool=False) -> None:
         for letter in self.letters: letter.update()
@@ -518,18 +518,18 @@ class Text:
 
 class AnimatedText(Text):
     def __init__(
-        self, window: Window,
+        self, surface: Surface,
         text: str, x: float, y: float,
         size: int, color: any='white', font: str='cmuserifroman',
         anchor_x: str='left', anchor_y: str='top',
         transition_time: float=1, start_time: float=0,
         z_index: int=9999
     ):
-        super().__init__(window, text, x, y, size, color, font, anchor_x, anchor_y, start_time, z_index)
+        super().__init__(surface, text, x, y, size, color, font, anchor_x, anchor_y, start_time, z_index)
 
         transition_time /= self.length
         for letter in self.letters:
-            letter.color = LerpColor(window.color, letter.color, transition_time, start_time)
+            letter.color = LerpColor(surface.color, letter.color, transition_time, start_time)
             start_time += transition_time
         
         self.transition_time = transition_time
@@ -548,21 +548,21 @@ class AnimatedText(Text):
 
 class FastText:
     def __init__(
-        self, window: Window,
+        self, surface: Surface,
         text: str, x: float, y: float,
         size: int, color: any='white', font: str='cmuserifroman',
         anchor_x: str='left', anchor_y: str='top',
         start_time: float=0, z_index: int=9999
     ):
-        self.window = window
+        self.surface = surface
         self.color = get_color(color)
         self.font = pygame.font.SysFont(font, size)
         self.text = self.font.render(text, True, self.color.rgb())
         self.rect = self.text.get_rect(**{anchor_x: x, anchor_y: y})
         self.start_time = start_time
 
-        window.add_element(self, z_index)
+        surface.add_element(self, z_index)
     
     def show(self) -> None:
         if Clock.time < self.start_time: return
-        self.window.screen.blit(self.text, self.rect)
+        self.surface.screen.blit(self.text, self.rect)

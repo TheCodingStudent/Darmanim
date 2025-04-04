@@ -256,7 +256,6 @@ class Graph:
         self.elements = []
     
     def displace_to(self, x: pixel, y: pixel, start_time: float=0, transition_time: float=0) -> Graph:
-        """Esta es la documentacion, bebita"""
         if start_time != 0:
             Action(self.displace_to, start_time, args=(x, y, 0, transition_time))
             return self

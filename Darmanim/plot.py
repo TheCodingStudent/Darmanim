@@ -1,11 +1,13 @@
 from __future__ import annotations
 import pygame
-from Darmanim.window import Window
+from Darmanim.window import Surface
 from Darmanim.color import get_color
 from Darmanim.graph import Grid, Axis
-from Darmanim.values import get_value
+from Darmanim.values import get_value, Action, Event, LerpEvent, LerpValue, ActionEvent, LerpEventGroup
 
 type coordinate = list[tuple[float, float]]
+type unit = float
+type pixel = float
 
 
 class PlotPoint:
@@ -24,8 +26,8 @@ class PlotPoint:
 
     def update(self) -> None:
         if not self.group: return
-        if self.x is not None: x = self.group.plot.grid.convert_x_to_pixel(self.x.get())
-        if self.y is not None: y = self.group.plot.grid.convert_y_to_pixel(self.y.get())
+        x = self.group.plot.grid.convert_x_to_pixel(self.x.get())
+        y = self.group.plot.grid.convert_y_to_pixel(self.y.get())
         self.center = (x, y)
 
     def style(self, surface: pygame.Surface, center: tuple[float, float], radius: int, color: tuple[int, int, int]):
@@ -35,18 +37,18 @@ class PlotPoint:
         self.style(self.group.plot.surface, self.center, self.radius.get(int), self.color.rgb())
     
     def __call__(self, *args, **kwargs) -> PlotPoint:
-        group, x, y = args
+        group, x, y, _, _ = args
         return PlotPoint(group, x, y, self.color, self.radius)
 
 
 class Plot:
     def __init__(
-        self, size: tuple[int, int],
+        self, size: tuple[pixel, pixel],
         grid: Grid|None=None,
         axis: Axis|None=None,
         color: any=None,
         border: any='white',
-        border_width: int=1
+        border_width: pixel=1
     ):
         self.screen = None
         self.surface = pygame.Surface(size)
@@ -65,9 +67,65 @@ class Plot:
         if (self.border is None) or (self.border_width == 0): return
         pygame.draw.rect(self.surface, self.border.rgb(), (0, 0, self.width, self.height), width=self.border_width)
 
-    def attach(self, window: Window, x: int|None=None, y: int|None=None) -> None:
-        self.screen = window.screen
-        if self.color is None: self.color = window.color
+    def displace_to(self, x: pixel, y: pixel, start_time: float=0, transition_time: float=0) -> Plot:
+        if start_time != 0:
+            Action(self.displace_to, start_time, args=(x, y, 0, transition_time))
+            return self
+        
+        if transition_time == 0:
+            Event(self, 'x', x, start_time)
+            Event(self, 'y', y, start_time)
+        else:
+            LerpEvent(self, 'x', self.x, x, transition_time, start_time)
+            LerpEvent(self, 'y', self.y, y, transition_time, start_time)
+        
+        return self
+    
+    def move_to(self, x: unit, y: unit, start_time: float=0, transition_time: float=0) -> Plot:
+        if start_time != 0:
+            Action(self.move_to, start_time, args=(x, y, 0, transition_time))
+            return self
+        
+        if transition_time == 0:
+            self.grid.center_at(x, y)
+        else:
+            def move_grid(x: LerpValue, y: LerpValue) -> None:
+                self.grid.center_at(x.get(), -y.get())
+                # for group in self.groups: group.update(True)
+
+            x = LerpValue(self.grid.center[0], x, transition_time)
+            y = LerpValue(self.grid.center[1], y, transition_time)
+            ActionEvent(move_grid, 0, transition_time, args=(x, y))
+        
+        return self
+    
+    def reshape(self, width: pixel, height: pixel, start_time: float=0, transition_time: float=0) -> Plot:
+        if start_time != 0:
+            Action(self.reshape, start_time, args=(width, height, 0, transition_time))
+            return self
+        
+        if transition_time == 0:
+            Event(self, 'width', width, start_time, update_element=True)
+            Event(self, 'height', height, start_time, update_element=True)
+        else:
+            dx = (self.width - width) / 2 
+            dy = (self.height - height) / 2 
+            LerpEventGroup(
+                (self, self, self, self),
+                ('width', 'height', 'x', 'y'),
+                (self.width, self.height, self.x, self.y),
+                (width, height, self.x+dx, self.y+dy),
+                transition_time, update_elements=True, update_function=self.reshape_update
+            )
+
+    def reshape_update(self) -> None:
+        self.surface = pygame.Surface((self.width, self.height))
+        self.grid.update()
+        # for group in self.groups: group.update(True)
+
+    def attach(self, surface: Surface, x: int|None=None, y: int|None=None) -> None:
+        self.screen = surface.screen
+        if self.color is None: self.color = surface.color
         if x is None: self.x = (self.screen.get_width() - self.width) / 2
         else: self.x = x
         if y is None: self.y = (self.screen.get_height() - self.height) / 2
@@ -80,7 +138,7 @@ class Plot:
         self.axis.show()
 
         for group in self.groups:
-            group.update()
+            group.update(True)
             group.show()
 
         self.draw_border()
@@ -98,11 +156,11 @@ class Plot:
     def plot(
         self, coordinates: list[tuple[float, float]],
         color: any='white', fill: any=None,
-        closed: bool=True, width: int=1, radius: int=3,
+        closed: bool=True, stroke: int=1, radius: int=3,
         call_update: bool=False,
         plot_style: any=PlotPoint
     ) -> None:
-        group = PlotGroup(self, coordinates, color, fill, closed, width, radius, call_update, plot_style)
+        group = PlotGroup(self, coordinates, color, fill, closed, stroke, radius, call_update, plot_style)
         self.groups.append(group)
 
 
@@ -137,14 +195,14 @@ class PlotGroup(ScatterGroup):
         self,
         plot: Plot, coordinates: list[tuple[float, float]],
         color: any, fill: any,
-        closed: bool, width: int, radius: int,
+        closed: bool, stroke: int, radius: int,
         call_update: bool,
         plot_style: any
     ):
         super().__init__(plot, coordinates, color, radius, call_update, plot_style)
         self.lines = []
         self.closed = closed
-        self.width = get_value(width)
+        self.stroke = get_value(stroke)
 
         self.fill = get_color(fill) if len(coordinates) >= 3 else None
         self.color = get_color(color)
@@ -156,5 +214,5 @@ class PlotGroup(ScatterGroup):
 
     def show(self) -> None:
         if self.fill: pygame.draw.polygon(self.plot.surface, self.fill.rgb(), self.lines)
-        pygame.draw.lines(self.plot.surface, self.color.rgb(), self.closed, self.lines, width=self.width.get(int))
+        pygame.draw.lines(self.plot.surface, self.color.rgb(), self.closed, self.lines, width=self.stroke.get(int))
         super().show()
