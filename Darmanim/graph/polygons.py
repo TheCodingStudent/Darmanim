@@ -4,7 +4,7 @@ import pygame
 import numpy as np
 from Darmanim.color import get_color
 from Darmanim.graph import Graph, Point, unit, pixel
-from Darmanim.values import get_value, LerpValue, ContinuosValue
+from Darmanim.values import get_value, LerpValue, ContinuosValue, Action, Event, LerpEvent
 
 
 type degrees = float
@@ -18,6 +18,22 @@ class Polygon:
         self.fill = get_color(fill)
         self.color = get_color(color)
         self.stroke = get_value(stroke)
+
+    def set_stroke(self, stroke: pixel, start_time: float=0, transition_time: float=0) -> Circle:
+        if start_time == 0:
+            if transition_time == 0: self.stroke = stroke
+            else: LerpEvent(self, 'stroke', self.stroke, stroke, transition_time, 0, True)
+        else: Action(self.set_stroke, start_time, args=(stroke, 0, transition_time))
+
+        return self
+    
+    def set_color(self, color: unit, start_time: float=0, transition_time: float=0) -> Circle:
+        if start_time == 0:
+            if transition_time == 0: self.color = get_color(color)
+            else: LerpEvent(self, 'color', self.color, get_color(color), transition_time, 0, True)
+        else: Action(self.set_color, start_time, args=(color, 0, transition_time))
+
+        return self
 
     def get_points(self, radius: pixel=10, stroke: pixel=3, color: any='white', fill: any='black') -> list[Point]:
         return Point.from_list(self.points, radius, stroke, color, fill)
@@ -107,6 +123,22 @@ class Ellipse(Polygon):
         self.b = get_value(b)
         self.update()
     
+    def set_minor_radius(self, radius: unit, start_time: float=0, transition_time: float=0) -> Circle:
+        if start_time == 0:
+            if transition_time == 0: self.b = radius
+            else: LerpEvent(self, 'b', self.b, radius, transition_time, 0, True)
+        else: Action(self.set_minor_radius, start_time, args=(radius, 0, transition_time))
+
+        return self
+    
+    def set_major_radius(self, radius: unit, start_time: float=0, transition_time: float=0) -> Circle:
+        if start_time == 0:
+            if transition_time == 0: self.a = radius
+            else: LerpEvent(self, 'a', self.a, radius, transition_time, 0, True)
+        else: Action(self.set_major_radius, start_time, args=(radius, 0, transition_time))
+
+        return self
+
     def update(self) -> None:
         angles = np.arange(0, 2*np.pi, 2*np.pi/180)
         self.points = np.zeros((180, 2))
@@ -135,6 +167,14 @@ class Circle(Ellipse):
         self.radius = get_value(radius)
         super().__init__(center, radius, radius, color, fill, stroke)
     
+    def set_radius(self, radius: unit, start_time: float=0, transition_time: float=0) -> Circle:
+        if start_time == 0:
+            if transition_time == 0: self.radius = radius
+            else: LerpEvent(self, 'radius', self.radius, radius, transition_time, 0, True)
+        else: Action(self.set_radius, start_time, args=(radius, 0, transition_time))
+
+        return self
+
     def update(self) -> None:
         self.a = self.b = self.radius
         super().update()
@@ -178,6 +218,22 @@ class Rectangle(Polygon):
         self.width = get_value(width)
         self.height = get_value(height)
     
+    def set_width(self, width: unit, start_time: float=0, transition_time: float=0) -> Circle:
+        if start_time == 0:
+            if transition_time == 0: self.width = width
+            else: LerpEvent(self, 'width', self.width, width, transition_time, 0, True)
+        else: Action(self.set_width, start_time, args=(width, 0, transition_time))
+
+        return self
+
+    def set_height(self, height: unit, start_time: float=0, transition_time: float=0) -> Circle:
+        if start_time == 0:
+            if transition_time == 0: self.height = height
+            else: LerpEvent(self, 'height', self.height, height, transition_time, 0, True)
+        else: Action(self.set_height, start_time, args=(height, 0, transition_time))
+
+        return self
+
     def point_along(self, start_angle: degrees, end_angle: degrees, transition_time: float=1) -> Point:
         fisrt_angle = math.atan(self.height / self.width)
         complementary_angle = math.pi/2 - fisrt_angle

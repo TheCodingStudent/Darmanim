@@ -1,7 +1,7 @@
 from __future__ import annotations
 import math
 from Darmanim.time import time
-from Darmanim.values import Object
+from Darmanim.values import Object, Value
 
 
 def get_color(value: any) -> Color:
@@ -36,7 +36,12 @@ class Color:
             else:
                 color = getattr(Color, value.lower())
                 self.r, self.g, self.b = color.rgb()
+        elif isinstance(value, Value):
+            self.r, self.g, self.b = value.get().rgb()
     
+    def get(self) -> Color:
+        return self
+
     def rgb(self) -> tuple[int, int, int]:
         return (int(self.r), int(self.g), int(self.b))
 

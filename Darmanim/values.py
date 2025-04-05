@@ -37,9 +37,8 @@ class Event(Object):
     def update(self) -> bool:
         if Clock.time < self.start_time: return False
 
-        setattr(self.element, self.attribute, self.value.get())
+        setattr(self.element, self.attribute, self.value)
         if self.update_element: self.element.update()
-
         if self.transition_time == 0: return True
 
         return False
@@ -64,6 +63,7 @@ class LerpEvent(Object):
 
         t = self.time / self.transition_time
         value = self.start + (self.end - self.start) * t
+        if not (hasattr(value, 'r') and hasattr(value, 'g') and hasattr(value, 'b')): value = Value(value)
         setattr(self.element, self.attribute, value)
         if self.update_element: self.element.update()
 
@@ -96,6 +96,8 @@ class LerpEventGroup(Object):
         t = self.time / self.transition_time
         for element, attribute, start, end in zip(self.elements, self.attributes, self.starts, self.ends):
             value = start + (end - start) * t
+            if not (hasattr(value, 'r') and hasattr(value, 'g') and hasattr(value, 'b')): value = Value(value)
+
             setattr(element, attribute, value)
             if self.update_elements:
                 if self.update_function: self.update_function()
@@ -135,6 +137,7 @@ class ActionEvent(Object):
 
 def get_value(value: any) -> Value:
     if isinstance(value, (Value, LerpValue, ContinuosValue)): return value
+    if hasattr(value, 'r') and hasattr(value, 'g') and hasattr(value, 'b'): return value
     return Value(value)
 
 
