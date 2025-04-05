@@ -45,19 +45,22 @@ class Surface:
         self,
         x: int, y: int,
         size: tuple[int, int]=(0, 0), flags: int=0,
-        color: any='background', border: any='white', border_width: int=0
+        color: any='background', border: any='white', border_width: int=0,
+        anchor_x: str='left', anchor_y: str='top', z_index: int=9999
     ):
-        if size == (0, 0) and flags == 0: flags = pygame.FULLSCREEN
         self.screen = pygame.Surface(size, flags)
         self.color = get_color(color)
         self.border = get_color(border)
         self.border_width = get_value(border_width)
         self.width, self.height = self.screen.get_size()
+        self.center = (self.width/2, self.height/2)
+
+        self.z_index = z_index
 
         self.elements = []
         self.hidden = []
 
-        self.rect = self.screen.get_rect(topleft=(x, y))
+        self.rect = self.screen.get_rect(**{anchor_x: x, anchor_y: y})
     
     def displace_to(self, x: int, y: int, start_time: float=0, transition_time: float=0) -> Surface:
         if start_time == 0:
@@ -150,6 +153,8 @@ class Window(Surface):
         pygame.init()
         Clock.fps = fps
         self.screen = pygame.display.set_mode(size, flags)
+        self.width, self.height = self.screen.get_size()
+        self.center = (self.width/2, self.height/2)
 
         self.output = output
         self.record_time = record_time

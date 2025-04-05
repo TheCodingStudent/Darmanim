@@ -1,10 +1,11 @@
+from __future__ import annotations
 import math
 import pygame
 import numpy as np
 from Darmanim.time import Clock
 from Darmanim.window import Surface
 from Darmanim.color import get_color, LerpColor
-from Darmanim.values import get_value, get_values, Value, LerpValue
+from Darmanim.values import get_value, get_values, Value, LerpValue, LerpEventGroup, Action
 
 type pixel = float
 type rect = tuple[pixel, pixel, pixel, pixel]
@@ -409,11 +410,19 @@ class Group:
         else:
             for i, element in enumerate(self._elements): setattr(element, name, value)
     
+    def __getattribute__(self, name):
+        if name in ('_elements', 'n'): return super().__getattribute__(name)
+        return Group([getattr(element, name) for element in self._elements])
+    
+    def __call__(self, *args, **kwargs) -> None:
+        for element in self._elements:
+            element(*args, **kwargs)
+
     def __getitem__(self, index: int|slice|str) -> any:
         if isinstance(index, slice):
             return Group(self._elements[index])
         if isinstance(index, str):
-            return Group([letter for letter in self.letters if letter.font_text in index])
+            return Group([letter for letter in self._elements if letter.font_text in index])
         return self._elements[index]
 
 
@@ -444,6 +453,10 @@ class Letter:
 
         self.font = pygame.font.SysFont(self.font_name, self.font_size)
         self.text = self.font.render(self.font_text, True, self.color.rgb())
+        # self.update_rect()
+        self.rect = self.text.get_rect(topleft=(self.x.get(), self.y.get()))
+    
+    def update_rect(self) -> None:
         self.rect = self.text.get_rect(topleft=(self.x.get(), self.y.get()))
     
     def show(self) -> None:
@@ -465,37 +478,86 @@ class Letter:
 class Text:
     def __init__(
         self, surface: Surface,
-        text: str, x: float, y: float,
+        text: str|list[str], x: float, y: float,
         size: int, color: any='white', font: str='cmuserifroman',
         anchor_x: str='left', anchor_y: str='top',
         start_time: float=0, z_index: int=9999
     ):
+        self.surface = surface
+        self.size = size
+        self.color = color
+        self.font = font
+
+        self.anchor_x = anchor_x
+        self.anchor_y = anchor_y
+
+        self.z_index = z_index
+        self.start_time = start_time
+
         self.letters = []
-        self.font_text = text
+        self.length = 0
         self.start_x, self.start_y = x, y
-        for letter in text:
-            self.letters.append(Letter(surface, letter, x, y, size, color, font, start_time))
-            x += self.letters[-1].rect.width
 
-        self.length = len(self.letters)
-        self.width = x - self.start_x
-        self.height = y - self.start_y + pygame.font.SysFont(font, size).get_height()
-        if anchor_x == 'centerx': offset_x = -self.width/2
-        elif anchor_x == 'right': offset_x = -self.width
-        else: offset_x = 0
+        self.width, self.height = 0, 0
+        self.x, self.y = float('inf'), float('inf')
 
-        if anchor_y == 'centery': offset_y = -self.height/2
-        elif anchor_y == 'bottom': offset_y = -self.height
-        else: offset_y = 0
+        if isinstance(text, str): text = [text]
+        for index, line in enumerate(text):
+            self.parse_line(line, index, len(text))
+        
+        self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
 
-        self.rect = pygame.Rect(x + offset_x, y + offset_y, self.width, self.height)
+    def parse_line(self, line: str, line_index: int, lines_number: int) -> None:
+        width = 0
+        x = self.start_x
+        height = pygame.font.SysFont(self.font, self.size).get_height()
 
-        for letter in self.letters:
+        for letter in line:
+            self.letters.append(Letter(self.surface, letter, x, self.start_y+height*line_index, self.size, self.color, self.font, self.start_time))
+            width += self.letters[-1].rect.width
+            x = self.start_x + width
+            self.length += 1
+        
+        self.width = max(self.width, width)
+        self.height = height * lines_number 
+        
+        offset_x = 0
+        if self.anchor_x == 'centerx': offset_x = -width/2
+        elif self.anchor_x == 'right': offset_x = -width
+
+        offset_y = 0
+        if self.anchor_y == 'centery': offset_y = -self.height/2
+        elif self.anchor_y == 'bottom': offset_y = -self.height
+
+        self.x = min(self.x, self.start_x + offset_x)
+        self.y = min(self.y, self.start_y + offset_y)
+
+        for letter in self.letters[-len(line):]:
             letter.x += offset_x
             letter.y += offset_y
+        
+        self.surface.add_element(self, self.z_index)
 
-        self.start_time = start_time
-        surface.add_element(self, z_index)
+    def displace_by(self, dx: pixel, dy: pixel, start_time: float=0, transition_time: float=0) -> Text:
+        if start_time == 0:
+            if transition_time == 0:
+                for letter in self.letters:
+                    letter.x += dx
+                    letter.y += dy
+            else:
+                def update_function() -> None:
+                    for letter in self.letters: letter.update_rect()
+
+                starts_x = [letter.x for letter in self.letters]
+                ends_x = [letter.x + dx for letter in self.letters]
+                starts_y = [letter.y for letter in self.letters]
+                ends_y = [letter.y + dy for letter in self.letters]
+                LerpEventGroup(self.letters, ['x']*self.length, starts_x, ends_x, transition_time, update_elements=True, update_function=update_function)
+                LerpEventGroup(self.letters, ['y']*self.length, starts_y, ends_y, transition_time, update_elements=True, update_function=update_function)
+        else:
+            Action(self.displace_by, start_time, args=(dx, dy, 0, transition_time))
+        
+        return self
 
     def update(self, update_values: bool=False) -> None:
         for letter in self.letters: letter.update()
@@ -503,6 +565,7 @@ class Text:
     def show(self) -> None:
         if Clock.time < self.start_time: return
         for letter in self.letters: letter.show()
+        pygame.draw.rect(self.surface.screen, 'white', self.rect, width=1)
     
     def __getitem__(self, index: int|slice|str) -> Letter:
         if isinstance(index, slice):
@@ -534,7 +597,7 @@ class AnimatedText(Text):
         
         self.transition_time = transition_time
         self.should_update = True
-    
+
     def update(self, should_update: bool=False) -> None:
         if not self.should_update: return
         super().update(should_update)
