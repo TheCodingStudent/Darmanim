@@ -4,6 +4,6 @@ from Darmanim.draw import *
 from Darmanim.values import *
 from Darmanim.graph import *
 from Darmanim.plot import *
-from Darmanim.polygons import *
+from Darmanim.graph.polygons import *
 from Darmanim.time import *
 from Darmanim.window import *

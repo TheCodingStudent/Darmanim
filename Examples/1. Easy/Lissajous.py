@@ -1,5 +1,5 @@
 from Darmanim.window import Window
-from Darmanim.polygons import Circle
+from Darmanim.graph.polygons import Circle
 from Darmanim.graph import Graph, Point, Path, Line
 
 

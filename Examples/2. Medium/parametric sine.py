@@ -35,4 +35,5 @@ if __name__ == '__main__':
     LerpEvent(circle, 'radius', 1, 5, transition_time=5, start_time=5, update_element=True)
 
     window.record()
+    
     window.run()

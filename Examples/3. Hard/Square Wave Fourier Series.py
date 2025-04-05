@@ -1,6 +1,6 @@
 import numpy as np
 from Darmanim.window import Window
-from Darmanim.polygons import Circle
+from Darmanim.graph.polygons import Circle
 from Darmanim.values import ContinuosValue
 from Darmanim.graph import Graph, Grid, Point, Path, BlankGrid, BlankGraph, Function
 

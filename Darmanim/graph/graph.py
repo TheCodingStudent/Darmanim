@@ -240,7 +240,7 @@ class Graph:
         axis: Axis|None=None,
         color: any=None,
         border: any='border',
-        border_width: pixel=1
+        border_width: pixel=0
     ):
         self.screen = None
         self.surface = pygame.Surface(size)

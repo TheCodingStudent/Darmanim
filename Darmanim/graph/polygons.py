@@ -2,7 +2,6 @@ from __future__ import annotations
 import math
 import pygame
 import numpy as np
-import pygame.gfxdraw
 from Darmanim.color import get_color
 from Darmanim.graph import Graph, Point, unit, pixel
 from Darmanim.values import get_value, LerpValue, ContinuosValue
@@ -36,7 +35,6 @@ class Polygon:
 
     def show(self) -> None:
         self.update()
-
         if self.fill: pygame.draw.polygon(self.graph.surface, self.fill.rgb(), self.coordinates)
         if self.stroke == 1:
             return pygame.draw.aalines(self.graph.surface, self.color.rgb(), True, self.coordinates)
@@ -134,22 +132,25 @@ class Circle(Ellipse):
         color: any='white', fill: any=None,
         stroke: int=1
     ):
-        super().__init__(center, radius, radius, color, fill, stroke)
         self.radius = get_value(radius)
+        super().__init__(center, radius, radius, color, fill, stroke)
     
+    def update(self) -> None:
+        self.a = self.b = self.radius
+        super().update()
+
     def point_along(
         self,
         start_angle: degrees, end_angle: degrees|None=None,
         color: any='white', fill: any=None, 
         radius: pixel=10, stroke: pixel=3,
-        transition_time: float=1, add: bool=False,
-        direction: int=1,
-        graph: Graph|None=None
+        transition_time: float=1,
+        direction: int=1, graph: Graph|None=None
     ) -> Point:
         start_angle = math.radians(start_angle)
 
-        x_func = lambda x: math.cos(x) * self.radius.get() + self.x
-        y_func = lambda x: math.sin(x) * self.radius.get() + self.y
+        x_func = lambda x: math.cos(x) * self.radius + self.x
+        y_func = lambda x: math.sin(x) * self.radius + self.y
 
         if end_angle is None:
             x = ContinuosValue(start_angle, 2*np.pi*direction, transition_time, function=x_func)
@@ -160,7 +161,6 @@ class Circle(Ellipse):
             y = LerpValue(start_angle, end_angle, transition_time, function=y_func)
 
         point = Point(x, y, radius, stroke, color, fill)
-        if add: self.graph.add(point)
         if graph is not None: point.graph = graph
 
         return point
