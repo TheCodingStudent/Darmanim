@@ -8,6 +8,11 @@ def get_color(value: any) -> Color:
     if value is None: return None
     if isinstance(value, str) and hasattr(Style, value): return getattr(Style, value)
     if isinstance(value, (Color, LerpColor, SwitchColor)): return value
+    if isinstance(value, (tuple, list)):
+        start, end = get_color(value[0]), get_color(value[1])
+        if len(value) == 2: return LerpColor(start, end, 1)
+        elif len(value) == 3: return LerpColor(start, end, value[2])
+        elif len(value) == 4: return LerpColor(start, end, value[2], value[3])
     return Color(value)
 
 
