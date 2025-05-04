@@ -16,6 +16,10 @@ def get_color(value: any) -> Color:
     return Color(value)
 
 
+def get_colors(values: tuple[any]) -> list[Color]:
+    return [get_color(value) for value in values]
+
+
 def lerp(start: float, end: float, t: float) -> float:
     return start + (end - start) * t
 
@@ -107,6 +111,7 @@ class SwitchColor(Object):
 class LerpColor(Object):
     def __init__(self, start: any, end: any, transition_time: time, start_time: time=0):
         super().__init__(start_time)
+        self.t = 0
         self.color = self.start = get_color(start)
         self.end = get_color(end)
 
@@ -114,12 +119,12 @@ class LerpColor(Object):
         self.transition_time = transition_time
     
     def update(self) -> bool:
-        t = min(self.time/self.transition_time, 1)
-        self.color = self.start + (self.end - self.start) * t
+        self.t = min(self.time/self.transition_time, 1)
+        self.color = self.start + (self.end - self.start) * self.t
 
         self.r, self.g, self.b = self.color.rgb()
 
-        return t == 1
+        return self.t == 1
     
     def rgb(self) -> tuple[int, int, int]:
         return self.color.rgb()

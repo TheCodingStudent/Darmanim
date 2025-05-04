@@ -45,27 +45,40 @@ class Event(Object):
     
 
 class LerpEvent(Object):
-    def __init__(self, element: any, attribute: str, start: any, end: any, transition_time: float, start_time: float=0, update_element: bool=False):
+    def __init__(self, element: any, attribute: str, start: any, end: any, transition_time: float, start_time: float=0, update_element: bool=False, update_function: callable|None=None):
         super().__init__(start_time)
         self.element = element
         self.attribute = attribute
         self.start = get_value(start)
         self.end = get_value(end)
+
+        print(self.start, self.end)
+
         self.transition_time = transition_time
         self.update_element = update_element
+        self.update_function = update_function
         Object.add(self)
 
     def update(self) -> bool:
         if Clock.time < self.start_time: return False
         if self.time >= self.transition_time:
-            setattr(self.element, self.attribute, self.end.get())
+            setattr(self.element, self.attribute, self.end)
+            if self.update_element:
+                if self.update_function: self.update_function()
+                else: self.element.update()
             return True
 
         t = self.time / self.transition_time
+
         value = self.start + (self.end - self.start) * t
+        # print(value)
+
         if not (hasattr(value, 'r') and hasattr(value, 'g') and hasattr(value, 'b')): value = Value(value)
         setattr(self.element, self.attribute, value)
-        if self.update_element: self.element.update()
+
+        if self.update_element:
+            if self.update_function: self.update_function()
+            else: self.element.update()
 
         return False
 

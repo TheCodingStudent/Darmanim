@@ -5,33 +5,87 @@ import numpy as np
 from Darmanim.time import Clock
 from Darmanim.window import Surface
 from Darmanim.color import get_color, LerpColor
-from Darmanim.values import get_value, get_values, Value, LerpValue, LerpEventGroup, Action
+from Darmanim.values import get_value, get_values, Value, LerpValue, LerpEventGroup, Action, LerpEvent, ActionEvent
 
 type pixel = float
+type degrees = float
 type rect = tuple[pixel, pixel, pixel, pixel]
 type coordinate = tuple[pixel, pixel]
 
 
 class Line:
+    continous = 'continous'
+    dashed = 'dashed'
+
     def __init__(
         self, surface: Surface,
         start: coordinate, end: coordinate,
         color: any='white', stroke: pixel=1,
-        start_time: float=0, z_index: int=9999
+        start_time: float=0, line_type: str='continous',
+        z_index: int=9999
     ):
         self.surface = surface
         self.x0, self.y0 = get_values(start)
         self.x1, self.y1 = get_values(end)
+
+        self.start = (self.x0, self.y0)
+        self.end = (self.x1, self.y1)
+        self.mid = (self.x0.get() + self.x1.get()) / 2, (self.y0.get() + self.y1.get()) / 2
+
         self.stroke = get_value(stroke)
         self.color = get_color(color)
         self.start_time = start_time
+        self.line_type = line_type
+
+        self.length = Value(math.hypot(self.x1 - self.x0, self.y1 - self.y0))
+        self.angle = Value(math.atan2(self.y1 - self.y0, self.x1 - self.x0))
 
         surface.add_element(self, z_index)
     
+    def update_line(self) -> None:
+        dx = self.length * math.cos(self.angle.get())
+        dy = self.length * math.sin(self.angle.get())
+        self.x1.value = self.x0.get() + dx
+        self.y1.value = self.y0.get() + dy
+
+        self.mid = (self.x0.get() + self.x1.get()) / 2, (self.y0.get() + self.y1.get()) / 2
+
+    def rotate(self, angle: degrees, start_time: float=0, transition_time: float=0) -> Line:
+        if start_time == 0:
+            LerpEvent(self, 'angle', self.angle.get(), self.angle.get() + math.radians(angle), transition_time, start_time, True, self.update_line)
+        else:
+            Action(self.rotate, start_time, args=(angle, 0, transition_time))
+        return self
+
+    def set_length(self, length: pixel, start_time: float=0, transition_time: float=1) -> Line:
+        if start_time == 0:
+            if transition_time == 0:
+                self.length = length
+                self.update_line()
+            else: LerpEvent(self, 'length', self.length, length, transition_time, start_time, True, self.update_line)
+        else:
+            Action(self.set_length, start_time, args=(length, 0, transition_time))
+        return self
+
+    def show_continous(self, start: coordinate, end: coordinate) -> None:
+        pygame.draw.line(self.surface.screen, self.color.rgb(), start, end, self.stroke.get(int))
+    
+    def show_dashed(self, start: coordinate, end: coordinate) -> None:
+        x1, y1 = start
+        x2, y2 = end
+        dl = 50
+
+        dashes = int(self.length.get() / dl)
+
+        for i in range(dashes):
+            start = (x1 + (x2 - x1) * i / dashes, y1 + (y2 - y1) * i / dashes)
+            end = (x1 + (x2 - x1) * (i + 0.5) / dashes, y1 + (y2 - y1) * (i + 0.5) / dashes)
+            pygame.draw.line(self.surface.screen, self.color.rgb(), start, end)
+
     def show(self) -> None:
         if Clock.time < self.start_time: return
         start, end = (self.x0.get(), self.y0.get()), (self.x1.get(), self.y1.get())
-        pygame.draw.line(self.surface.screen, self.color.rgb(), start, end, self.stroke.get(int))
+        getattr(self, f'show_{self.line_type}')(start, end)        
 
 
 class Lines:
@@ -83,6 +137,14 @@ class Circle:
         self.update(update_values=True)
         surface.add_element(self, z_index)
     
+    def set_radius(self, radius: pixel, start_time: float=0, transition_time: float=0) -> Circle:
+        if start_time == 0:
+            if transition_time == 0: self.radius = radius
+            else: LerpEvent(self, 'radius', self.radius, radius, transition_time, 0, True)
+        else: Action(self.set_radius, start_time, args=(radius, 0, transition_time))
+
+        return self
+
     def update(self, update_values: bool=False) -> None:
         if not update_values:
             if Clock.time < self.start_time or not self.should_update: return
@@ -90,7 +152,7 @@ class Circle:
     
     def show(self) -> None:
         if Clock.time < self.start_time: return
-        pygame.draw.circle(self.surface.screen, self.color.rgb(), self.center, self.radius.get(), self.stroke.get(int))
+        pygame.draw.circle(self.surface.screen, self.color.rgb(), self.center, self.radius, self.stroke.get(int))
 
 
 class Ellipse:
@@ -326,30 +388,33 @@ class RegularPolygon(Polygon):
         self.coordinates[b:, 1] = self.y.get() + math.sin(d_angle * (i + 1) + phase) * self.radius.get()
 
 
-class AnimatedLine:
+class AnimatedLine(Line):
     def __init__(
         self, surface: Surface,
         start: coordinate, end: coordinate,
         color: any='white', stroke: pixel=1,
         transition_time: float=1, start_time: float=0,
-        z_index: int=9999
+        line_type: str='continous', z_index: int=9999
     ):
-        self.surface = surface
-        self.x0, self.y0 = get_values(start)
-        self.x1, self.y1 = get_values(end)
+        
+        super().__init__(surface, start, end, color, stroke, start_time, line_type, z_index)
         self.x = LerpValue(self.x0, self.x1, transition_time, start_time)
         self.y = LerpValue(self.y0, self.y1, transition_time, start_time)
 
-        self.stroke = get_value(stroke)
-        self.color = get_color(color)
-        self.start_time = start_time
+    def update_line(self) -> None:
+        dx = self.length * math.cos(self.angle.get())
+        dy = self.length * math.sin(self.angle.get())
+        if self.x.t != 1: self.x1.value = self.x0.get() + dx
+        else: self.x.value = self.x0.get() + dx
 
-        surface.add_element(self, z_index)
-    
+        if self.y.t != 1: self.y1.value = self.y0.get() + dy
+        else: self.y.value = self.y0.get() + dy
+        self.mid = self.x0.lerp(self.x1, 0.5), self.y0.lerp(self.y1, 0.5)
+
     def show(self) -> None:
         if Clock.time < self.start_time: return
         start, end = (self.x0.get(), self.y0.get()), (self.x.get(), self.y.get())
-        pygame.draw.line(self.surface.screen, self.color.rgb(), start, end, self.stroke.get(int))
+        getattr(self, f'show_{self.line_type}')(start, end)   
 
 
 class AnimatedLines:
@@ -430,7 +495,8 @@ class Letter:
     def __init__(
         self, surface: Surface,
         text: str, x: float, y: float,
-        size: int, color: any='white', font: str='cmuserifroman',
+        size: int, color: any='white', background: any=None,
+        font: str='cmuserifroman',
         start_time: float=0
     ):
         self.surface = surface
@@ -439,7 +505,8 @@ class Letter:
         self.font_size = size
 
         self.x, self.y = x, y
-        self.color = color
+        self.color = get_color(color)
+        self.background = get_color(background)
         self.start_time = start_time
 
         self.should_update = True
@@ -453,13 +520,14 @@ class Letter:
 
         self.font = pygame.font.SysFont(self.font_name, self.font_size)
         self.text = self.font.render(self.font_text, True, self.color.rgb())
-        # self.update_rect()
         self.rect = self.text.get_rect(topleft=(self.x.get(), self.y.get()))
     
     def update_rect(self) -> None:
         self.rect = self.text.get_rect(topleft=(self.x.get(), self.y.get()))
     
     def show(self) -> None:
+        if self.background:
+            pygame.draw.rect(self.surface.screen, self.background.rgb(), self.rect)
         self.surface.screen.blit(self.text, self.rect)
     
     def __setattr__(self, name: str, value: any) -> None:
@@ -481,12 +549,14 @@ class Text:
         text: str|list[str], x: float, y: float,
         size: int, color: any='white', font: str='cmuserifroman',
         anchor_x: str='left', anchor_y: str='top',
-        start_time: float=0, z_index: int=9999
+        start_time: float=0, background: any=None,
+        z_index: int=9999
     ):
         self.surface = surface
         self.size = size
         self.color = color
         self.font = font
+        self.background = background
 
         self.anchor_x = anchor_x
         self.anchor_y = anchor_y
@@ -513,7 +583,7 @@ class Text:
         height = pygame.font.SysFont(self.font, self.size).get_height()
 
         for letter in line:
-            self.letters.append(Letter(self.surface, letter, x, self.start_y+height*line_index, self.size, self.color, self.font, self.start_time))
+            self.letters.append(Letter(self.surface, letter, x, self.start_y+height*line_index, self.size, self.color, self.background, self.font, self.start_time))
             width += self.letters[-1].rect.width
             x = self.start_x + width
             self.length += 1
@@ -565,7 +635,7 @@ class Text:
     def show(self) -> None:
         if Clock.time < self.start_time: return
         for letter in self.letters: letter.show()
-        pygame.draw.rect(self.surface.screen, 'white', self.rect, width=1)
+        # pygame.draw.rect(self.surface.screen, 'white', self.rect, width=1)
     
     def __getitem__(self, index: int|slice|str) -> Letter:
         if isinstance(index, slice):
@@ -586,9 +656,9 @@ class AnimatedText(Text):
         size: int, color: any='white', font: str='cmuserifroman',
         anchor_x: str='left', anchor_y: str='top',
         transition_time: float=1, start_time: float=0,
-        z_index: int=9999
+        background: any=None, z_index: int=9999
     ):
-        super().__init__(surface, text, x, y, size, color, font, anchor_x, anchor_y, start_time, z_index)
+        super().__init__(surface, text, x, y, size, color, font, anchor_x, anchor_y, start_time, background, z_index)
 
         transition_time /= self.length
         for letter in self.letters:
@@ -600,10 +670,10 @@ class AnimatedText(Text):
 
     def update(self, should_update: bool=False) -> None:
         if not self.should_update: return
-        super().update(should_update)
+        super().update()
 
         for i, letter in enumerate(self.letters):
-            if Clock.time >= letter.start_time + i * self.transition_time + 0.1:
+            if letter.color.t == 1:
                 letter.should_update = False
             else: break
         else: self.should_update = False
