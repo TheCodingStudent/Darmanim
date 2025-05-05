@@ -400,6 +400,7 @@ class AnimatedLine(Line):
         super().__init__(surface, start, end, color, stroke, start_time, line_type, z_index)
         self.x = LerpValue(self.x0, self.x1, transition_time, start_time)
         self.y = LerpValue(self.y0, self.y1, transition_time, start_time)
+        self.update_line()
 
     def update_line(self) -> None:
         dx = self.length * math.cos(self.angle.get())
@@ -556,7 +557,7 @@ class Text:
         self.size = size
         self.color = color
         self.font = font
-        self.background = background
+        self.background = get_color(background)
 
         self.anchor_x = anchor_x
         self.anchor_y = anchor_y

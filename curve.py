@@ -1,11 +1,9 @@
 import math
 from Darmanim.window import Window
-from Darmanim.color import get_colors
-from Darmanim.values import LerpEventGroup
 from Darmanim.draw import AnimatedLine, Line, Circle, AnimatedText, AnimatedLines
 
 if __name__ == '__main__':
-    window = Window(size=(0, 0), fps=120, output='curve.mp4', record_time=18)
+    window = Window(size=(0, 0), fps=120, output='curve.mp4', record_time=24)
 
     # VARIABLES DEL PROYECTO
     scale = 3
@@ -65,6 +63,12 @@ if __name__ == '__main__':
     pt.set_radius(5, start_time=5.5, transition_time=0.5)
     AnimatedText(surface=window, text='PT', x=PT[0]+10, y=PT[1], size=24, anchor_y='centery', start_time=5.5, transition_time=0.5)
 
+    st_1_x = (PI[0] + PC[0]) / 2
+    st_2_x = (PT[0] + PI[0]) / 2
+    st_y = (PC[1] + PI[1]) / 2
+    AnimatedText(surface=window, text='ST', x=st_1_x, y=st_y, size=24, anchor_x='right', anchor_y='bottom', start_time=5.5, transition_time=0.5)
+    AnimatedText(surface=window, text='ST', x=st_2_x, y=st_y, size=24, anchor_x='left', anchor_y='bottom', start_time=5.5, transition_time=0.5)
+
     # APARECE EL PUNTO DEL ORIGEN Y LINEAS QUE LO CONECTAN
     o = Circle(surface=window, center=O, radius=0, color='red', stroke=0, z_index=0)
     o.set_radius(5, start_time=6, transition_time=1)
@@ -94,7 +98,7 @@ if __name__ == '__main__':
     psc_mid_angle_line.rotate(angle=psc_angle/2-45)
 
     # UNIR EL PC CON LA LINEA ANTERIOR
-    pc_psc_mid = AnimatedLine(surface=window, start=PC, end=psc_mid_angle_line.end, color='yellow', stroke=2, start_time=9.5)
+    pc_psc_mid = AnimatedLine(surface=window, start=PC, end=psc_mid_angle_line.end, color='red', stroke=2, start_time=9.5)
 
     # DIBUJAR LINEA DE ANGULO DE PSC
     psc_angle_line = AnimatedLine(surface=window, start=O, end=(O[0], O[1]-RC), color='gray', z_index=2, start_time=10.5)
@@ -108,22 +112,7 @@ if __name__ == '__main__':
     # DIBUJAMOS UN CIRCULO EN EL PUNTO SOBRE LA CURVA
     psc = Circle(surface=window, center=psc_angle_line.end, stroke=0, radius=0)
     psc.set_radius(radius=5, start_time=12.5, transition_time=0.25)
-
-    # REMOVEMOS LAS LINEAS Y PUNTO PREVIO (DESPUES SE PUEDE HACER UNA FUNCION QUE HAGA ESTO)
-    LerpEventGroup(
-        (psc_mid_angle_line, pc_psc_mid, psc_angle_line, c, d, psc),
-        ('color', 'color', 'color', 'color', 'color', 'color'),
-        get_colors(['gray', 'yellow', 'gray', 'green', 'red', 'white']),
-        get_colors(['background', 'white', 'background', 'background', 'background', 'background']),
-        transition_time=1, start_time=13.5
-    )
-
-    window.remove(psc_mid_angle_line, start_time=14.5)
-    window.remove(pc_psc_mid, start_time=14.5)
-    window.remove(psc_angle_line, start_time=14.5)
-    window.remove(c, start_time=14.5)
-    window.remove(d, start_time=14.5)
-    window.remove(psc, start_time=14.5)
+    psc.set_radius(radius=0, start_time=13.5, transition_time=0.5)
 
     # AÑADIMOS LOS PUNTOS SOBRE LA CURVA
     window_psc = []
@@ -132,11 +121,28 @@ if __name__ == '__main__':
         y = PC[1] + dy * scale
         window_psc.append((x, y))
         start_time = 15 + (i+1) / len(PSC)
+        if i % 2 == 0: continue
         psc = Circle(surface=window, center=(x, y), stroke=0, radius=0)
         psc.set_radius(radius=5, start_time=start_time, transition_time=0.25)
         psc.set_radius(radius=3, start_time=16.5, transition_time=0.25)
 
-    AnimatedLines(surface=window, points=window_psc, color='yellow', start_time=17)
+    AnimatedLines(surface=window, points=window_psc, color='yellow', stroke=2, start_time=17, z_index=float('inf'))
+
+    # AÑADIMOS TEXTOS PARA LOS NUEVOS ELEMENTOS GEOMETRICOS
+    left_rc_mid = (PC[0] + O[0]) / 2, (PC[1] + O[1]) / 2
+    angle_mid = left_rc_mid[0] + 65, left_rc_mid[1] - 65
+    AnimatedLine(surface=window, start=left_rc_mid, end=angle_mid, color='darkyellow', start_time=18)
+    AnimatedText(surface=window, text='Θ', x=(left_rc_mid[0] + angle_mid[0])/2, y=(left_rc_mid[1] + angle_mid[1])/2, size=24, start_time=18)
+
+    AnimatedLine(surface=window, start=(O[0], PC[1]), end=(O[0], 350), color='gray', start_time=19)
+    AnimatedText(surface=window, text='M', x=O[0], y=(PC[1]+350)/2, size=24, anchor_x='centerx', anchor_y='centery', background='background', start_time=19.5, transition_time=0.25)
+    AnimatedLine(surface=window, start=(O[0], 350), end=PI, color='gray', start_time=20)
+    AnimatedText(surface=window, text='E', x=O[0], y=(PI[1]+350)/2, size=24, anchor_x='centerx', anchor_y='centery', background='background', start_time=20.5, transition_time=0.25)
+
+    right_rc_mid = (PT[0] + O[0]) / 2, (PT[1] + O[1]) / 2
+    chaining_line = AnimatedLine(surface=window, start=O, end=window_psc[-3], color='gray', start_time=21)
+    chaining_dim = AnimatedLine(surface=window, start=right_rc_mid, end=chaining_line.mid, color='darkyellow', start_time=22)
+    AnimatedText(surface=window, text='20m', x=chaining_dim.mid[0]-5, y=chaining_dim.mid[1], size=24, anchor_y='bottom', start_time=23, transition_time=0.25)
 
     # window.record()
     window.run()
