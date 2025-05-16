@@ -685,18 +685,37 @@ class FastText:
         self, surface: Surface,
         text: str, x: float, y: float,
         size: int, color: any='white', font: str='cmuserifroman',
-        anchor_x: str='left', anchor_y: str='top',
+        background: any=None, anchor_x: str='left', anchor_y: str='top',
         start_time: float=0, z_index: int=9999
     ):
         self.surface = surface
         self.color = get_color(color)
+        # background = get_color(background)
         self.font = pygame.font.SysFont(font, size)
         self.text = self.font.render(text, True, self.color.rgb())
         self.rect = self.text.get_rect(**{anchor_x: x, anchor_y: y})
         self.start_time = start_time
+
+        self.height = self.text.get_height()
 
         surface.add_element(self, z_index)
     
     def show(self) -> None:
         if Clock.time < self.start_time: return
         self.surface.screen.blit(self.text, self.rect)
+    
+    def displace_by(self, dx: pixel, dy: pixel, start_time: float=0, transition_time: float=0) -> FastText:
+        if start_time != 0:
+            Action(self.displace_by, start_time, args=(dx, dy, 0, transition_time))
+            return self
+
+        LerpEventGroup(
+            elements=(self.rect, self.rect),
+            attributes=('x', 'y'),
+            starts=(self.rect.x, self.rect.y),
+            ends=(self.rect.x + dx, self.rect.y + dy),
+            transition_time=transition_time,
+            start_time=start_time
+        )
+
+        return self

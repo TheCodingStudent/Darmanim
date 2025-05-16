@@ -140,6 +140,9 @@ class Surface:
             if hasattr(element, 'update'):
                 try: element.update(True)
                 except TypeError: element.update()
+    
+    def screenshot(self, filename: str) -> None:
+        pygame.image.save(self.screen, filename)
 
 
 class Window(Surface):
